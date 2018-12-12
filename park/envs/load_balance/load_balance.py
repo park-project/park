@@ -104,17 +104,20 @@ class LoadBalanceEnv(core.Env):
                 logger.warn('Server ' + str(server.server_id) + ' at time ' +
                              str(self.wall_time.curr_time) + ' has load ' + str(load) +
                              ' larger than obs_high ' + str(self.obs_high[server.server_id]))
-                load = self.obs_high
+                load = self.obs_high[server.server_id]
             obs_arr.append(load)
 
         # incoming job size
-        if self.incoming_job.size > self.obs_high[-1]:
-            logger.warn('Incoming job at time ' + str(self.wall_time.curr_time) +
-                          ' has size ' + str(self.incoming_job.size) +
-                          ' larger than obs_high ' + str(self.obs_high[-1]))
-            obs_arr.append(self.obs_high[-1])
+        if self.incoming_job is None:
+            obs_arr.append(0)
         else:
-            obs_arr.append(self.incoming_job.size)
+            if self.incoming_job.size > self.obs_high[-1]:
+                logger.warn('Incoming job at time ' + str(self.wall_time.curr_time) +
+                              ' has size ' + str(self.incoming_job.size) +
+                              ' larger than obs_high ' + str(self.obs_high[-1]))
+                obs_arr.append(self.obs_high[-1])
+            else:
+                obs_arr.append(self.incoming_job.size)
 
         return np.array(obs_arr)
 
