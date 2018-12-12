@@ -119,7 +119,10 @@ class LoadBalanceEnv(core.Env):
             else:
                 obs_arr.append(self.incoming_job.size)
 
-        return np.array(obs_arr)
+        obs_arr = np.array(obs_arr)
+        assert self.observation_space.contains(obs_arr)
+
+        return obs_arr
 
     def reset(self):
         for server in self.servers:
