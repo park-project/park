@@ -4,7 +4,8 @@ from collections import deque
 from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
-from park.envs.abr.trace_loader import load_traces, load_chunk_sizes
+from park.envs.abr.trace_loader import \
+    load_traces, load_chunk_sizes, sample_trace, get_chunk_time
 
 
 class ABREnv(core.Env):
@@ -85,14 +86,15 @@ class ABREnv(core.Env):
                    valid_past_action]
 
         # current chunk size of different bitrates
-        obs_arr.extend([self.chunk_sizes[i][valid_chunk_idx]] for i in range(6))
+        obs_arr.extend(self.chunk_sizes[i][valid_chunk_idx] for i in range(6))
 
         # fit in observation space
         for i in range(len(obs_arr)):
             if obs_arr[i] > self.obs_high[i]:
                 logger.warn('Observation at index ' + str(i) +
-                    ' at chunk index ' + str(chunk_idx) +
-                    ' is larger than obs_high' +
+                    ' at chunk index ' + str(self.chunk_idx) +
+                    ' has value ' + str(obs_arr[i]) +
+                    ', which is larger than obs_high ' +
                     str(self.obs_high[i]))
                 obs_arr[i] = self.obs_high[i]
 
@@ -125,7 +127,7 @@ class ABREnv(core.Env):
         # out of the observation space
         self.obs_low = np.array([0] * 11)
         self.obs_high = np.array([
-            10e6, 100, 100, 50, 5, 10e6, 10e6, 10e6, 10e6, 10e6, 10e6])
+            10e6, 100, 100, 500, 5, 10e6, 10e6, 10e6, 10e6, 10e6, 10e6])
         self.observation_space = spaces.Box(
             low=self.obs_low, high=self.obs_high, dtype=np.float32)
         self.action_space = spaces.Discrete(6)
@@ -192,4 +194,7 @@ class ABREnv(core.Env):
         self.chunk_idx += 1
         done = (self.chunk_idx == self.total_num_chunks)
 
-        return self.observe(), reward, done
+        return self.observe(), reward, done, \
+               {'bitrate': self.bitrate_map[action],
+                'stall_time': rebuffer_time,
+                'bitrate_change': bitrate_change}
