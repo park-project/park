@@ -27,6 +27,8 @@ parser.add_argument('--job_size_pareto_shape', type=float, default=1.5,
                     help='pareto job size distribution shape (default: 1.5)')
 parser.add_argument('--job_size_pareto_scale', type=float, default=100.0,
                     help='pareto job size distribution scale (default: 100.0)')
+parser.add_argument('--load_balance_obs_high', type=float, default=5000.0,
+                    help='observation cap for load balance env (default: 5000.0)')
 
 
 config = parser.parse_args()

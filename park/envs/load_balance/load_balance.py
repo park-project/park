@@ -1,6 +1,6 @@
 import numpy as np
 
-from park import core, spaces
+from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
 from park.envs.load_balance.job import Job
@@ -49,6 +49,8 @@ class LoadBalanceEnv(core.Env):
         Stochastic Processes and their Applications, 25:301–308, 1987.
     """
     def __init__(self):
+        # observation and action space
+        self.setup_space()
         # random seed
         self.seed(config.seed)
         # global timer
@@ -63,6 +65,8 @@ class LoadBalanceEnv(core.Env):
         self.incoming_job = None
         # finished jobs (for logging at the end)
         self.finished_jobs = []
+        # reset environment (generate new jobs)
+        self.reset()
 
     def generate_jobs(self):
         all_t, all_size = generate_jobs(self.num_stream_jobs, self.np_random)
@@ -85,7 +89,34 @@ class LoadBalanceEnv(core.Env):
         return servers
 
     def observe(self):
-        return self.servers, self.incoming_job
+        obs_arr = []
+        # load on each server
+        for server in self.servers:
+            # queuing work
+            load = sum(j.size for j in server.queue)
+            if server.curr_job is not None:
+                # remaining work currently being processed
+                load += (server.curr_job.finish_time
+                        - self.wall_time.curr_time) * server.service_rate
+            # if the load is larger than observation threshold
+            # report a warning
+            if load > self.obs_high[server.server_id]:
+                logger.warn('Server ' + str(server.server_id) + ' at time ' +
+                             str(self.wall_time.curr_time) + ' has load ' + str(load) +
+                             ' larger than obs_high ' + str(self.obs_high[server.server_id]))
+                load = self.obs_high
+            obs_arr.append(load)
+
+        # incoming job size
+        if self.incoming_job.size > self.obs_high[-1]:
+            logger.warn('Incoming job at time ' + str(self.wall_time.curr_time) +
+                          ' has size ' + str(self.incoming_job.size) +
+                          ' larger than obs_high ' + str(self.obs_high[-1]))
+            obs_arr.append(self.obs_high[-1])
+        else:
+            obs_arr.append(self.incoming_job.size)
+
+        return np.array(obs_arr)
 
     def reset(self):
         for server in self.servers:
@@ -97,11 +128,26 @@ class LoadBalanceEnv(core.Env):
         self.finished_jobs = []
         # initialize environment (jump to first job arrival event)
         self.initialize()
+        return self.observe()
 
     def seed(self, seed):
         self.np_random = seeding.np_random(seed)
 
+    def setup_space(self):
+        # Set up the observation and action space
+        # The boundary of the space may change if the dynamics is changed
+        # a warning message will show up every time e.g., the observation falls
+        # out of the observation space
+        self.obs_low = np.array([0] * (config.num_servers + 1))
+        self.obs_high = np.array([config.load_balance_obs_high] * (config.num_servers + 1))
+        self.observation_space = spaces.Box(
+            low=self.obs_low, high=self.obs_high, dtype=np.float32)
+        self.action_space = spaces.Discrete(config.num_servers)
+
     def step(self, action):
+
+        # 0 <= action < num_servers
+        assert self.action_space.contains(action)
 
         # schedule job to server
         self.servers[action].schedule(self.incoming_job)

@@ -76,7 +76,7 @@ class Space(object):
     """
     def __init__(self, struct=None, shape=None, dtype=None):
         import numpy as np # takes about 300-400ms to import, load lazily
-        self.struct = None if struct is None else struct  # tensor, graph, etc.
+        self.struct = struct  # tensor, graph, etc.
         self.shape = None if shape is None else tuple(shape)
         self.dtype = None if dtype is None else np.dtype(dtype)
 

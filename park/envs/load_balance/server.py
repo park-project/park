@@ -1,7 +1,7 @@
 
 class Server(object):
-    def __init__(self, worker_id, service_rate, wall_time):
-        self.worker_id = worker_id
+    def __init__(self, server_id, service_rate, wall_time):
+        self.server_id = server_id
         self.service_rate = service_rate
         self.wall_time = wall_time
         self.queue = []
@@ -9,10 +9,10 @@ class Server(object):
 
     def schedule(self, job):
         self.queue.append(job)
-        job.worker = self
+        job.server = self
 
     def process(self):
-        # if the worker is currently idle (no current
+        # if the server is currently idle (no current
         # job or current job is done), and there are jobs
         # in the queue, then FIFO process a job
         if (self.curr_job is None or \
