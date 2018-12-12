@@ -79,7 +79,7 @@ class LoadBalanceEnv(core.Env):
 
     def initialize_servers(self, service_rates):
         servers = []
-        for server_id in range(config.num_servers)
+        for server_id in range(config.num_servers):
             server = Server(server_id, service_rates[server_id], self.wall_time)
             servers.append(server)
         return servers
