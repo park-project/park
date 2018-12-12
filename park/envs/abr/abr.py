@@ -134,8 +134,10 @@ class ABREnv(core.Env):
 
     def step(self, action):
 
-        # Note: sizes are in bytes, times are in seconds
+        # 0 <= action < num_servers
+        assert self.action_space.contains(action)
 
+        # Note: sizes are in bytes, times are in seconds
         chunk_size = self.chunk_sizes[action][self.chunk_idx]
 
         # compute chunk download time based on trace
