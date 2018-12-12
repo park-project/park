@@ -1,21 +1,36 @@
 import logging
+from park.param import config
 
 
-level = logging.INFO
-logging.basicConfig(level=level)
+if config.logging_level == 'debug':
+    level = logging.DEBUG
+elif config.logging_level == 'info':
+    level = logging.INFO
+elif config.logging_level == 'warning':
+    level = logging.WARNING
+elif config.logging_level == 'error':
+    level = logging.ERROR
+else:
+    raise ValueError('Unknown logging level ' + config.logging_level)
 
 
-def debug(msg, *args, **kwargs):
-    logging.debug(msg, args, kwargs)
+if config.log_to == 'print':
+    logging.basicConfig(level=level)
+else:
+    logging.basicConfig(filename=config.log_to, level=level)
 
 
-def info(msg, *args, **kwargs):
-    logging.info(msg, args, kwargs)
+def debug(msg):
+    logging.debug(msg)
 
 
-def warn(msg, *args, **kwargs):
-    logging.warning(msg, args, kwargs)
+def info(msg):
+    logging.info(msg)
 
 
-def error(msg, *args, **kwargs):
-    logging.error(msg, args, kwargs)
+def warn(msg):
+    logging.warning(msg)
+
+
+def error(msg):
+    logging.error(msg)

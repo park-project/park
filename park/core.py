@@ -63,7 +63,7 @@ class Env(object):
         """
         Sets the seed for this env's random number generator(s).
         """
-        logger.warn("Could not seed environment %s", self)
+        logger.warn('Could not seed environment ' + self.metadata['env.name'])
         return
 
 # Space-related abstractions
