@@ -12,3 +12,8 @@ register(
     env_id='abr',
     entry_point='park.envs.abr:ABREnv',
 )
+
+register(
+    env_id='aqm',
+    entry_point='park.envs.aqm:AQMEnv',
+)
