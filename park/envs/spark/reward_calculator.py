@@ -1,5 +1,4 @@
 import numpy as np
-from param import *
 
 
 class RewardCalculator(object):
@@ -16,26 +15,16 @@ class RewardCalculator(object):
 
         # now for all jobs (may have completed)
         # compute the elapsed time
-        if args.learn_obj == 'mean':
-            for job_dag in list(self.job_dags):
-                reward -= (min(
-                    job_dag.completion_time,
-                    curr_time) - max(
-                    job_dag.start_time,
-                    self.prev_time)) / \
-                    args.reward_scale
+        for job_dag in list(self.job_dags):
+            reward -= (min(
+                job_dag.completion_time,
+                curr_time) - max(
+                job_dag.start_time,
+                self.prev_time))
 
-                # if the job is done, remove it from the list
-                if job_dag.completed:
-                    self.job_dags.remove(job_dag)
-
-        elif args.learn_obj == 'makespan':
-            reward -= (curr_time - self.prev_time) / \
-                args.reward_scale
-
-        else:
-            print('Unkown learning objective')
-            exit(1)
+            # if the job is done, remove it from the list
+            if job_dag.completed:
+                self.job_dags.remove(job_dag)
 
         self.prev_time = curr_time
 

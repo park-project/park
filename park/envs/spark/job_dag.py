@@ -1,9 +1,11 @@
 import networkx as nx
 import numpy as np
 from collections import OrderedDict
-from utils import OrderedSet
-from param import *
-from spark_env.node import NodeDuration
+
+from park.utils.ordered_set import OrderedSet
+from park.param import config
+from park.envs.spark.node import NodeDuration
+
 
 class JobDAG(object):
     def __init__(self, nodes, adj_mat, name):

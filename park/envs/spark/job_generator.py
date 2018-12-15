@@ -1,9 +1,8 @@
 import os
-from param import *
-from utils import *
-from spark_env.task import *
-from spark_env.node import *
-from spark_env.job_dag import *
+from park.param import config
+from park.envs.spark.task import Task
+from park.envs.spark.node import Node
+from park.envs.spark.job_dag import JobDAG
 
 
 def load_job(file_path, query_size, query_idx, wall_time, np_random):
@@ -58,7 +57,7 @@ def load_job(file_path, query_size, query_idx, wall_time, np_random):
 
     # generate DAG
     job_dag = JobDAG(nodes, adj_mat,
-        args.query_type + '-' + query_size + '-' + str(query_idx))
+        config.query_type + '-' + query_size + '-' + str(query_idx))
 
     return job_dag
 
@@ -112,27 +111,27 @@ def generate_tpch_jobs(np_random, timeline, wall_time):
     job_dags = OrderedSet()
     t = 0
 
-    for _ in range(args.num_init_dags):
+    for _ in range(config.num_init_dags):
         # generate query
-        query_size = args.tpch_size[np_random.randint(len(args.tpch_size))]
-        query_idx = str(np_random.randint(args.tpch_num) + 1)
+        query_size = config.tpch_size[np_random.randint(len(config.tpch_size))]
+        query_idx = str(np_random.randint(config.tpch_num) + 1)
         # generate job
         job_dag = load_job(
-            args.job_folder, query_size, query_idx, wall_time, np_random)
+            config.job_folder, query_size, query_idx, wall_time, np_random)
         # job already arrived, put in job_dags
         job_dag.start_time = t
         job_dag.arrived = True
         job_dags.add(job_dag)
 
-    for _ in range(args.num_stream_dags):
+    for _ in range(config.num_stream_dags):
         # poisson process
-        t += int(np_random.exponential(args.stream_interval))
+        t += int(np_random.exponential(config.stream_interval))
         # uniform distribution
-        query_size = args.tpch_size[np_random.randint(len(args.tpch_size))]
-        query_idx = str(np_random.randint(args.tpch_num) + 1)
+        query_size = config.tpch_size[np_random.randint(len(config.tpch_size))]
+        query_idx = str(np_random.randint(config.tpch_num) + 1)
         # generate job
         job_dag = load_job(
-            args.job_folder, query_size, query_idx, wall_time, np_random)
+            config.job_folder, query_size, query_idx, wall_time, np_random)
         # push into timeline
         job_dag.start_time = t
         timeline.push(t, job_dag)
@@ -141,14 +140,14 @@ def generate_tpch_jobs(np_random, timeline, wall_time):
 
 
 def generate_jobs(np_random, timeline, wall_time):
-    if args.query_type == 'tpch':
+    if config.query_type == 'tpch':
         job_dags = generate_tpch_jobs(np_random, timeline, wall_time)
 
-    elif args.query_type == 'alibaba':
+    elif config.query_type == 'alibaba':
         job_dags = generate_alibaba_jobs(np_random, timeline, wall_time)
 
     else:
-        print('Invalid query type ' + args.query_type)
+        print('Invalid query type ' + config.query_type)
         exit(1)
 
     return job_dags

@@ -1,4 +1,4 @@
-from utils import OrderedSet
+from park.utils.ordered_set import OrderedSet
 
 
 class FreeExecutors(object):

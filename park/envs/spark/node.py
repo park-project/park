@@ -1,6 +1,7 @@
 import numpy as np
-from param import *
-from utils import OrderedSet
+
+from park.param import config
+from park.utils.ordered_set import OrderedSet
 
 
 class Node(object):
