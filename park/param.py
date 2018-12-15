@@ -30,20 +30,15 @@ parser.add_argument('--job_size_pareto_scale', type=float, default=100.0,
 parser.add_argument('--load_balance_obs_high', type=float, default=50000.0,
                     help='observation cap for load balance env (default: 5000.0)')
 
-
 # -- AQM - -
 parser.add_argument('--aqm_link_delay', type=int, default=10,
                     help='mahimahi link delay in millisecond (default: 10)')
-
 parser.add_argument('--aqm_step_num', type=int, default=300,
                     help='total number of steps (default: 300)')
-
 parser.add_argument('--aqm_step_interval', type=int, default=100,
                     help='time interval of each step in millisecond (default: 100)')
-
 parser.add_argument('--aqm_uplink_trace', type=str, default="park/envs/aqm/mahimahi/trace10",
                     help='mahimahi uplink trace file')
-
 parser.add_argument('--aqm_downlink_trace', type=str, default="park/envs/aqm/mahimahi/trace10",
                     help='mahimahi downlink trace file')
 
