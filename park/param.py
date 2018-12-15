@@ -30,7 +30,7 @@ parser.add_argument('--job_size_pareto_scale', type=float, default=100.0,
 parser.add_argument('--load_balance_obs_high', type=float, default=50000.0,
                     help='observation cap for load balance env (default: 5000.0)')
 
-# -- AQM - -
+# -- AQM --
 parser.add_argument('--aqm_link_delay', type=int, default=10,
                     help='mahimahi link delay in millisecond (default: 10)')
 parser.add_argument('--aqm_step_num', type=int, default=300,
@@ -42,5 +42,21 @@ parser.add_argument('--aqm_uplink_trace', type=str, default="park/envs/aqm/mahim
 parser.add_argument('--aqm_downlink_trace', type=str, default="park/envs/aqm/mahimahi/trace10",
                     help='mahimahi downlink trace file')
 
+# -- Spark --
+parser.add_argument('--exec_cap', type=int, default=50,
+                    help='Number of total executors (default: 50)')
+parser.add_argument('--num_init_dags', type=int, default=20,
+                    help='Number of initial DAGs in system (default: 20)')
+parser.add_argument('--num_stream_dags', type=int, default=100,
+                    help='number of streaming DAGs (default: 100)')
+parser.add_argument('--stream_interval', type=int, default=25000,
+                    help='inter job arrival time in milliseconds (default: 25000)')
+parser.add_argument('--executor_data_point', type=int,
+                    default=[5, 10, 20, 40, 50, 60, 80, 100], nargs='+',
+                    help='Number of executors used in data collection')
+parser.add_argument('--moving_delay', type=int, default=2000,
+                    help='Moving delay (milliseconds) (default: 2000)')
+parser.add_argument('--warmup_delay', type=int, default=1000,
+                    help='Executor warming up delay (milliseconds) (default: 1000)')
 
 config = parser.parse_args()

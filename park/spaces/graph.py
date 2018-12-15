@@ -10,8 +10,12 @@ class Graph(core.Space):
     m is number of features associated with each node of the graph(s),
     n number of nodes, which can be a variable number at each MDP step.
     """
-    def __init__(self, num_features):
-        self.m = num_features
+    def __init__(self, low=None, high=None):
+        assert low.shape == high.shape
+        assert len(low.shape) = 1
+        self.low = low
+        self.high = high
+        self.m = low.shape[0]
         self.n = None
         core.Space.__init__(self, 'graph_float32', (), np.float32)
 
@@ -32,4 +36,6 @@ class Graph(core.Space):
                node_features.shape[1] == self.m and \
                len(adjacency_mat.shape) == 2 and \
                adjacency_mat.shape[0] == adjacency_mat.shape[1] and \
-               adjacency_mat.shape[0] == self.n
+               adjacency_mat.shape[0] == self.n \
+               and (node_features >= self.low).all() \
+               and (node_features <= self.high).all()
