@@ -1,5 +1,6 @@
 import os
 from park.param import config
+from park.utils.ordered_set import OrderedSet
 from park.envs.spark.task import Task
 from park.envs.spark.node import Node
 from park.envs.spark.job_dag import JobDAG
@@ -102,11 +103,7 @@ def recursive_find_descendant(node):
         return node.descendant_nodes
 
 
-def generate_alibaba_jobs(np_random, timeline, wall_time):
-    pass
-
-
-def generate_tpch_jobs(np_random, timeline, wall_time):
+def generate_jobs(np_random, timeline, wall_time):
 
     job_dags = OrderedSet()
     t = 0
@@ -135,19 +132,5 @@ def generate_tpch_jobs(np_random, timeline, wall_time):
         # push into timeline
         job_dag.start_time = t
         timeline.push(t, job_dag)
-
-    return job_dags
-
-
-def generate_jobs(np_random, timeline, wall_time):
-    if config.query_type == 'tpch':
-        job_dags = generate_tpch_jobs(np_random, timeline, wall_time)
-
-    elif config.query_type == 'alibaba':
-        job_dags = generate_alibaba_jobs(np_random, timeline, wall_time)
-
-    else:
-        print('Invalid query type ' + config.query_type)
-        exit(1)
 
     return job_dags

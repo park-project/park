@@ -5,6 +5,7 @@ from collections import OrderedDict
 from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
+from park.utils.ordered_set import OrderedSet
 from park.envs.spark.action_map import compute_act_map, get_frontier_acts
 from park.envs.spark.reward_calculator import RewardCalculator
 from park.envs.spark.moving_executors import MovingExecutors
@@ -73,7 +74,7 @@ class SparkEnv(core.Env):
 
         # executors
         self.executors = OrderedSet()
-        for exec_id in range(args.exec_cap):
+        for exec_id in range(config.exec_cap):
             self.executors.add(Executor(exec_id))
 
         # free executors
@@ -151,7 +152,7 @@ class SparkEnv(core.Env):
             if len(schedulable_nodes) > 0:
                 node = next(iter(schedulable_nodes))
                 self.timeline.push(
-                    self.wall_time.curr_time + args.moving_delay, executor)
+                    self.wall_time.curr_time + config.moving_delay, executor)
                 # keep track of moving executors
                 self.moving_executors.add(executor, node)
                 backup_scheduled = True
@@ -249,7 +250,7 @@ class SparkEnv(core.Env):
                 else:
                     # need to move executor
                     self.timeline.push(
-                        self.wall_time.curr_time + args.moving_delay, executor)
+                        self.wall_time.curr_time + config.moving_delay, executor)
                     # keep track of moving executors
                     self.moving_executors.add(executor, node)
 
@@ -417,6 +418,8 @@ class SparkEnv(core.Env):
         self.source_job = None
         self.num_source_exec = len(self.executors)
         self.exec_to_schedule = OrderedSet(self.executors)
+
+        # TODO return observation
 
     def seed(self, seed):
         self.np_random = seeding.np_random(seed)
