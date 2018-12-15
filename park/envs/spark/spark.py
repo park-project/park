@@ -431,5 +431,5 @@ class SparkEnv(core.Env):
         self.observation_space = spaces.Graph(
             low=self.obs_low, high=self.obs_high)
         self.action_space = spaces.Tuple(
-            spaces.MaskedDiscrete(config.num_servers),
-            spaces.MaskedDiscrete(config.num_servers))
+            (spaces.MaskedDiscrete(config.num_servers),
+            spaces.MaskedDiscrete(config.num_servers)))

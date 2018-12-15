@@ -12,7 +12,7 @@ class Graph(core.Space):
     """
     def __init__(self, low=None, high=None):
         assert low.shape == high.shape
-        assert len(low.shape) = 1
+        assert len(low.shape) == 1
         self.low = low
         self.high = high
         self.m = low.shape[0]

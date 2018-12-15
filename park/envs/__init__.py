@@ -17,3 +17,8 @@ register(
     env_id='aqm',
     entry_point='park.envs.aqm:AQMEnv',
 )
+
+register(
+    env_id='spark',
+    entry_point='park.envs.spark:SparkEnv',
+)
