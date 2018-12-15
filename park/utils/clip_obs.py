@@ -1,5 +1,7 @@
 import numpy as np
 
+from park import logger
+
 
 def clip_obs(obs, obs_low, obs_high):
     # TODO: this supports 1D only, need to add a iterator in each space type
