@@ -4,10 +4,12 @@ import matplotlib.pyplot as plt
 
 
 class DirectedGraph(object):
-    def __init__(self, node_features, edge_features):
+    def __init__(self, node_features=None, edge_features=None):
         self.graph = nx.DiGraph()
-        self.update_nodes(node_features)
-        self.update_edges(edge_features)
+        if node_features is not None:
+            self.update_nodes(node_features)
+        if edge_features is not None:
+            self.update_edges(edge_features)
 
     def update_nodes(self, node_features):
         self.graph.add_nodes_from(node_features.keys())
@@ -27,7 +29,19 @@ class DirectedGraph(object):
     def remove_edges(self, edges):
         self.graph.remove_edges_from(edges)
 
-    def _node_features_tensor(self):
+    def has_node(self, node):
+        return self.graph.has_node(node)
+
+    def has_edge(self, edge):
+        return self.graph.has_edge(edge)
+
+    def nodes(self):
+        return self.graph.nodes
+
+    def edges(self):
+        return self.graph.edges
+
+    def get_node_features_tensor(self):
         node_features = []
         node_map = {}
         for (i, n) in enumerate(self.graph.nodes):
@@ -36,7 +50,7 @@ class DirectedGraph(object):
 
         return np.array(node_features), node_map
 
-    def _edge_features_tensor(self):
+    def get_edge_features_tensor(self):
         edge_features = []
         edge_map = {}
         for (i, e) in enumerate(self.graph.edges):
@@ -49,8 +63,8 @@ class DirectedGraph(object):
         # node feature matrix, adjacency matrix, edge feature matrix,
         # node map (node index -> node object),
         # edge map (edge index -> edge object)
-        node_features, node_map = self._node_features_tensor()
-        edge_features, edge_map = self._edge_features_tensor()
+        node_features, node_map = self.get_node_features_tensor()
+        edge_features, edge_map = self.get_edge_features_tensor()
         adj_mat = nx.adjacency_matrix(self.graph)
         return node_features, edge_features, adj_mat, node_map, edge_map
 

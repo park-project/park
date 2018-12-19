@@ -1,7 +1,7 @@
 import numpy as np
 from park import core
 from park.spaces.rng import np_random
-from park.utils.graph import DirectedGraph
+from park.utils.directed_graph import DirectedGraph
 
 
 class Graph(core.Space):
@@ -11,10 +11,12 @@ class Graph(core.Space):
     within their ranges.
     """
     def __init__(self, node_low=None, node_high=None, edge_low=None, edge_high=None):
-        assert node_low.shape == node_high.shape
-        assert len(node_low.shape) == 1
-        assert edge_low.shape == edge_high.shape
-        assert len(edge_low.shape) == 1
+        if node_low is not None or node_high is not None:
+            assert node_low.shape == node_high.shape
+            assert len(node_low.shape) == 1
+        if edge_low is not None or edge_high is not None:
+            assert edge_low.shape == edge_high.shape
+            assert len(edge_low.shape) == 1
         self.node_low = node_low
         self.node_high = node_high
         self.edge_low = edge_low
@@ -32,8 +34,8 @@ class Graph(core.Space):
         is_element = type(x) == DirectedGraph
         if is_element:
             # Note: this step can be slow
-            node_features, _ = x._node_features_tensor()
-            edge_features, _ = x._edge_features_tensor()
+            node_features, _ = x.get_node_features_tensor()
+            edge_features, _ = x.get_edge_features_tensor()
 
             is_element = (node_features >= self.node_low).all() and \
                          (node_features <= self.node_high).all() and \

@@ -6,6 +6,7 @@ from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
 from park.utils.ordered_set import OrderedSet
+from park.utils.directed_graph import DirectedGraph
 from park.envs.spark.action_map import compute_act_map, get_frontier_acts
 from park.envs.spark.reward_calculator import RewardCalculator
 from park.envs.spark.moving_executors import MovingExecutors
@@ -429,10 +430,13 @@ class SparkEnv(core.Env):
         # The boundary of the space may change if the dynamics is changed
         # a warning message will show up every time e.g., the observation falls
         # out of the observation space
-        self.obs_low = np.array([0] * 5)
-        self.obs_high = np.array([config.exec_cap, 1, config.exec_cap, 1000000, 500])
+        self.graph = DirectedGraph()
+        self.obs_node_low = np.array([0] * 5)
+        self.obs_node_high = np.array([config.exec_cap, 1, config.exec_cap, 1000000, 500])
+        self.obs_edge_low = self.obs_edge_high = np.array([])  # features on nodes only
         self.observation_space = spaces.Graph(
-            low=self.obs_low, high=self.obs_high)
+            node_low=self.obs_node_low, node_high=self.obs_node_high,
+            edge_low=self.obs_edge_low, edge_high=self.obs_edge_high)
         self.action_space = spaces.Tuple(
-            (spaces.MaskedDiscrete(config.num_servers),
+            (spaces.NodeInGraph(self.graph),
             spaces.MaskedDiscrete(config.num_servers)))
