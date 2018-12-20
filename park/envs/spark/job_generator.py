@@ -1,12 +1,26 @@
 import os
+import wget
+import zipfile
+import park
+import numpy as np
 from park.param import config
 from park.utils.ordered_set import OrderedSet
 from park.envs.spark.task import Task
 from park.envs.spark.node import Node
 from park.envs.spark.job_dag import JobDAG
+from park.envs.spark.set_with_count import SetWithCount
 
 
-def load_job(file_path, query_size, query_idx, wall_time, np_random):
+def load_job(query_size, query_idx, wall_time, np_random):
+    file_path = park.__path__[0] + '/envs/spark/traces/'
+    if not os.path.exists(file_path):
+        wget.download(
+                'https://www.dropbox.com/s/pmoivv5eg9ldmfn/traces.zip?dl=1',
+                out=park.__path__[0] + '/envs/spark/')
+        with zipfile.ZipFile(
+             park.__path__[0] + '/envs/spark/traces.zip', 'r') as zip_f:
+            zip_f.extractall(park.__path__[0] + '/envs/spark/')
+
     query_path = file_path + query_size + '/'
     
     adj_mat = np.load(
@@ -58,7 +72,7 @@ def load_job(file_path, query_size, query_idx, wall_time, np_random):
 
     # generate DAG
     job_dag = JobDAG(nodes, adj_mat,
-        config.query_type + '-' + query_size + '-' + str(query_idx))
+         'tpch-' + query_size + '-' + str(query_idx))
 
     return job_dag
 
@@ -106,15 +120,17 @@ def recursive_find_descendant(node):
 def generate_jobs(np_random, timeline, wall_time):
 
     job_dags = OrderedSet()
+    tpch_size = ['2g','5g','10g','20g','50g','80g','100g']
+    tpch_num = 22
     t = 0
 
     for _ in range(config.num_init_dags):
         # generate query
-        query_size = config.tpch_size[np_random.randint(len(config.tpch_size))]
-        query_idx = str(np_random.randint(config.tpch_num) + 1)
+        query_size = tpch_size[np_random.randint(len(tpch_size))]
+        query_idx = str(np_random.randint(tpch_num) + 1)
         # generate job
         job_dag = load_job(
-            config.job_folder, query_size, query_idx, wall_time, np_random)
+            query_size, query_idx, wall_time, np_random)
         # job already arrived, put in job_dags
         job_dag.start_time = t
         job_dag.arrived = True
@@ -124,11 +140,11 @@ def generate_jobs(np_random, timeline, wall_time):
         # poisson process
         t += int(np_random.exponential(config.stream_interval))
         # uniform distribution
-        query_size = config.tpch_size[np_random.randint(len(config.tpch_size))]
-        query_idx = str(np_random.randint(config.tpch_num) + 1)
+        query_size = tpch_size[np_random.randint(len(tpch_size))]
+        query_idx = str(np_random.randint(tpch_num) + 1)
         # generate job
         job_dag = load_job(
-            config.job_folder, query_size, query_idx, wall_time, np_random)
+            query_size, query_idx, wall_time, np_random)
         # push into timeline
         job_dag.start_time = t
         timeline.push(t, job_dag)

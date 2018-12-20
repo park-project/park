@@ -59,34 +59,35 @@ class JobDAG(object):
 
     def get_executor_interval_map(self):
         executor_interval_map = {}
+        executor_data_point = [5, 10, 20, 40, 50, 60, 80, 100]
         entry_pt = 0
 
         # get the left most map
-        for e in range(args.executor_data_point[0] + 1):
+        for e in range(executor_data_point[0] + 1):
             executor_interval_map[e] = \
-                (args.executor_data_point[0],
-                 args.executor_data_point[0])
+                (executor_data_point[0],
+                 executor_data_point[0])
 
         # get the center map
-        for i in range(len(args.executor_data_point) - 1):
-            for e in range(args.executor_data_point[i] + 1,
-                            args.executor_data_point[i + 1]):
+        for i in range(len(executor_data_point) - 1):
+            for e in range(executor_data_point[i] + 1,
+                            executor_data_point[i + 1]):
                 executor_interval_map[e] = \
-                    (args.executor_data_point[i],
-                     args.executor_data_point[i + 1])
+                    (executor_data_point[i],
+                     executor_data_point[i + 1])
             # at the data point
-            e = args.executor_data_point[i + 1]
+            e = executor_data_point[i + 1]
             executor_interval_map[e] = \
-                (args.executor_data_point[i + 1],
-                 args.executor_data_point[i + 1])
+                (executor_data_point[i + 1],
+                 executor_data_point[i + 1])
 
         # get the residual map
-        if args.exec_cap > args.executor_data_point[-1]:
-            for e in range(args.executor_data_point[-1] + 1,
-                            args.exec_cap + 1):
+        if config.exec_cap > executor_data_point[-1]:
+            for e in range(executor_data_point[-1] + 1,
+                            config.exec_cap + 1):
                 executor_interval_map[e] = \
-                    (args.executor_data_point[-1],
-                     args.executor_data_point[-1])
+                    (executor_data_point[-1],
+                     executor_data_point[-1])
 
         return executor_interval_map
 

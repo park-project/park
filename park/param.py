@@ -51,9 +51,6 @@ parser.add_argument('--num_stream_dags', type=int, default=100,
                     help='number of streaming DAGs (default: 100)')
 parser.add_argument('--stream_interval', type=int, default=25000,
                     help='inter job arrival time in milliseconds (default: 25000)')
-parser.add_argument('--executor_data_point', type=int,
-                    default=[5, 10, 20, 40, 50, 60, 80, 100], nargs='+',
-                    help='Number of executors used in data collection')
 parser.add_argument('--moving_delay', type=int, default=2000,
                     help='Moving delay (milliseconds) (default: 2000)')
 parser.add_argument('--warmup_delay', type=int, default=1000,
