@@ -18,6 +18,7 @@ from park.envs.spark.timeline import Timeline
 from park.envs.spark.executor import Executor
 from park.envs.spark.job_dag import JobDAG
 from park.envs.spark.task import Task
+from park.envs.spark.job_graph import add_job_in_graph, remove_job_from_graph
 
 
 class SparkEnv(core.Env):
@@ -97,6 +98,7 @@ class SparkEnv(core.Env):
         self.moving_executors.add_job(job_dag)
         self.free_executors.add_job(job_dag)
         self.exec_commit.add_job(job_dag)
+        add_job_in_graph(self.graph, job_dag)
 
     def assign_executor(self, executor, frontier_changed):
         if executor.node is not None and not executor.node.no_more_tasks:
@@ -393,6 +395,7 @@ class SparkEnv(core.Env):
         self.moving_executors.remove_job(job_dag)
         self.job_dags.remove(job_dag)
         self.finished_job_dags.add(job_dag)
+        remove_job_from_graph(job_dag, self.graph)
         self.action_map = compute_act_map(self.job_dags)
 
     def reset(self, max_time=np.inf):
@@ -419,8 +422,10 @@ class SparkEnv(core.Env):
         self.source_job = None
         self.num_source_exec = len(self.executors)
         self.exec_to_schedule = OrderedSet(self.executors)
+        # reset observation and action space
+        self.setup_space()
 
-        # TODO return observation
+        return self.observe()
 
     def seed(self, seed):
         self.np_random = seeding.np_random(seed)
