@@ -24,7 +24,7 @@ class NodeInGraph(core.Space):
 
     def sample(self):
         if self.valid_set is None:
-            nodes = list(self.graph.nodes)
+            nodes = list(self.graph.nodes())
         else:
             assert len(self.valid_set) <= self.graph.number_of_nodes()
             nodes = list(self.valid_set)

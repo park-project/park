@@ -24,7 +24,7 @@ class EdgeInGraph(core.Space):
 
     def sample(self):
         if self.valid_set is None:
-            edges = list(self.graph.edges)
+            edges = list(self.graph.edges())
         else:
             assert len(self.valid_set) <= self.graph.number_of_edges()
             edges = list(self.valid_set)
