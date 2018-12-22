@@ -114,7 +114,7 @@ class Node(object):
                 first_wave = \
                     self.task_duration['first_wave'][executor_key]
                 i = np.random.randint(len(first_wave))
-                duration = first_wave[i] + args.warmup_delay
+                duration = first_wave[i] + config.warmup_delay
 
         elif executor.task is not None and \
                 executor.task.node == task.node and \

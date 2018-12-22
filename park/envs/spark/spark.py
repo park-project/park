@@ -328,7 +328,8 @@ class SparkEnv(core.Env):
         if next_node is not None:
             use_exec = min(next_node.num_tasks - next_node.next_task_idx - \
                            self.exec_commit.node_commit[next_node] - \
-                           self.moving_executors.count(next_node), limit)
+                           self.moving_executors.count(next_node), limit,
+                           self.num_source_exec)
         else:
             use_exec = limit
         assert use_exec > 0
@@ -453,6 +454,9 @@ class SparkEnv(core.Env):
         self.action_map = compute_act_map(self.job_dags)
 
     def reset(self, max_time=np.inf):
+        # reset observation and action space
+        self.setup_space()
+
         self.max_time = max_time
         self.wall_time.reset()
         self.timeline.reset()
@@ -476,8 +480,6 @@ class SparkEnv(core.Env):
         self.source_job = None
         self.num_source_exec = len(self.executors)
         self.exec_to_schedule = OrderedSet(self.executors)
-        # reset observation and action space
-        self.setup_space()
 
         return self.observe()
 
