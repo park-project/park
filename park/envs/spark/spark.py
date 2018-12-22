@@ -500,8 +500,14 @@ class SparkEnv(core.Env):
         self.obs_node_high = np.array([config.exec_cap, 1, config.exec_cap, 1000, 100000, 1])
         self.obs_edge_low = self.obs_edge_high = np.array([])  # features on nodes only
         self.observation_space = spaces.Graph(
-            node_low=self.obs_node_low, node_high=self.obs_node_high,
-            edge_low=self.obs_edge_low, edge_high=self.obs_edge_high)
+            node_feature_space=spaces.MultiBox(
+                low=self.obs_node_low,
+                high=self.obs_node_high,
+                dtype=np.float32),
+            edge_feature_space=spaces.MultiBox(
+                low=self.obs_edge_low,
+                high=self.obs_edge_high,
+                dtype=np.float32))
         self.action_space = spaces.Tuple(
             (spaces.NodeInGraph(self.graph),
             spaces.MaskedDiscrete(config.num_servers)))
