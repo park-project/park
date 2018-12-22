@@ -315,7 +315,10 @@ class SparkEnv(core.Env):
 
         assert self.action_space.contains(action)
 
-        next_node, limit = action
+        next_node, limit_idx = action
+
+        # index starts from 0 but degree of parallelism starts with 1
+        limit = limit_idx + 1
 
         # mark the node as selected
         assert next_node not in self.node_selected
@@ -332,6 +335,7 @@ class SparkEnv(core.Env):
                            self.num_source_exec)
         else:
             use_exec = limit
+
         assert use_exec > 0
 
         self.exec_commit.add(source, next_node, use_exec)
@@ -450,7 +454,7 @@ class SparkEnv(core.Env):
         self.moving_executors.remove_job(job_dag)
         self.job_dags.remove(job_dag)
         self.finished_job_dags.add(job_dag)
-        remove_job_from_graph(job_dag, self.graph)
+        remove_job_from_graph(self.graph, job_dag)
         self.action_map = compute_act_map(self.job_dags)
 
     def reset(self, max_time=np.inf):

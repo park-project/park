@@ -16,6 +16,6 @@ def add_job_in_graph(graph, job_dag):
 
 def remove_job_from_graph(graph, job_dag):
     for node in job_dag.nodes:
-        graph.remove_nodes(node)
+        graph.remove_nodes([node])
         # Note: edges will be removed
         # automatically by networkx

@@ -50,7 +50,9 @@ class DirectedGraph(object):
         node_features = []
         node_map = {}
         for (i, n) in enumerate(self.graph.nodes):
-            node_features.append(self.graph.nodes[n]['feature'])
+            feature = self.graph.nodes[n]['feature']
+            if feature is not None:
+                node_features.append(feature)
             node_map[i] = n
 
         return np.array(node_features), node_map
@@ -59,7 +61,9 @@ class DirectedGraph(object):
         edge_features = []
         edge_map = {}
         for (i, e) in enumerate(self.graph.edges):
-            edge_features.append(self.graph[e[0]][e[1]]['feature'])
+            feature = self.graph[e[0]][e[1]]['feature']
+            if feature is not None:
+                edge_features.append(feature)
             edge_map[i] = e
 
         return np.array(edge_features), edge_map
