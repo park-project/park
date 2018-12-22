@@ -70,6 +70,8 @@ parser.add_argument('--qopt_exh', type=int,default=0, help="0 or 1")
 parser.add_argument('--qopt_verbose', type=int,default=0, help="0 or 1")
 parser.add_argument('--qopt_left_deep', type=int,default=0, help="0 or 1")
 parser.add_argument('--qopt_execute_on_db', type=int,default=0, help="0 or 1")
+parser.add_argument('--qopt_only_attr_features', type=int, required=False,
+                            default=1, help='')
 
 parser.add_argument('--qopt_reward_normalization', type=str, required=False,
                             default='min_max', help='type of reward normalization')

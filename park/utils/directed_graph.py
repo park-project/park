@@ -32,7 +32,8 @@ class DirectedGraph(object):
         return self.graph.has_node(node)
 
     def has_edge(self, edge):
-        return self.graph.has_edge(edge)
+        assert len(edge) == 2
+        return self.graph.has_edge(edge[0], edge[1])
 
     def nodes(self):
         return self.graph.nodes

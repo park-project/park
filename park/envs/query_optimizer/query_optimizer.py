@@ -59,34 +59,19 @@ class QueryOptEnv(core.Env):
         self.min_reward = None
         self.max_reward = None
 
+        # setup space with the new graph
+        self._setup_space()
+
     def reset(self):
         print("reset")
         query = self._send("reset")
         # TODO: set up min-max etc.
         print("query is: ", query)
-
-        # get first observation
-        vertexes = self._send("getQueryGraph")
-        # FIXME: hack
-        vertexes = vertexes.replace("null,", "")
-        vertexes = eval(vertexes)
-        edges = self._send("")
-        edges = eval(edges)
-
-        self.graph = DirectedGraph()
-        # now, let's fill it up
-        nodes = {}
-        # TODO: adding other attributes to the featurization scheme
-        for v in vertexes:
-            self.graph.update_nodes({v["id"] : v["visibleAttributes"]})
-
-        for e in edges:
-            self.graph.update_edges({tuple(e["factors"]) : e["joinAttributes"]})
-
-        # setup space with the new graph
-        self._setup_space()
+        self.graph = self._observe()
+        self.action_space.update_graph(self.graph)
 
         # return the first observation
+        return self.graph
 
     def step(self, action):
         '''
@@ -94,6 +79,7 @@ class QueryOptEnv(core.Env):
         '''
         print("step!")
         print("action: ", action)
+        assert self.action_space.contains(action)
 
         return None, None, None, None
 
@@ -105,11 +91,45 @@ class QueryOptEnv(core.Env):
         os.killpg(os.getpid(), signal.SIGTERM)
         print("killed the java server")
 
+    def _observe(self):
+        '''
+        TODO: more details
+        gets the current query graph from calcite, and updates self.graph and
+        the spaces accordingly.
+        '''
+        # get first observation
+        vertexes = self._send("getQueryGraph")
+        # FIXME: hack
+        vertexes = vertexes.replace("null,", "")
+        vertexes = eval(vertexes)
+        edges = self._send("")
+        edges = eval(edges)
+
+        graph = DirectedGraph()
+        # now, let's fill it up
+        nodes = {}
+        # TODO: adding other attributes to the featurization scheme.
+
+        if config.qopt_only_attr_features:
+            for v in vertexes:
+                graph.update_nodes({v["id"] : v["visibleAttributes"]})
+
+            for e in edges:
+                graph.update_edges({tuple(e["factors"]) : e["joinAttributes"]})
+        else:
+            assert False, "no other featurization scheme supported right now"
+        assert self.observation_space.contains(graph)
+        return graph
+
     def _setup_space(self):
         print('setup space!')
         # TODO: set the features
-        self.observation_space = spaces.Graph()
-        self.action_space = spaces.EdgeInGraph(self.graph)
+        node_feature_space = spaces.PowerSet(set(range(self.attr_count)))
+        edge_feature_space = spaces.PowerSet(set(range(self.attr_count)))
+        self.observation_space = spaces.Graph(node_feature_space,
+                edge_feature_space)
+        # we will be updating the action space as the graph evolves
+        self.action_space = spaces.EdgeInGraph()
 
     def _start_java_server(self):
         JAVA_EXEC_FORMAT = 'mvn -e exec:java -Dexec.mainClass=Main \
@@ -138,11 +158,7 @@ class QueryOptEnv(core.Env):
     def _send(self, msg):
         """
         """
-        self.socket.send(msg)
-        # TODO: would using NOBLOCK be better to avoid polling issues?
-        # ret = None
-        # while (True):
-            # ret = self.socket.recv(zmq.NOBLOCK)
-            # time.sleep(0.1)
+        self.socket.send_string(msg)
         ret = self.socket.recv()
-	return ret
+        ret = ret.decode("utf8")
+        return ret
