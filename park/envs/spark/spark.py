@@ -17,6 +17,7 @@ from park.envs.spark.wall_time import WallTime
 from park.envs.spark.timeline import Timeline
 from park.envs.spark.executor import Executor
 from park.envs.spark.job_dag import JobDAG
+from park.envs.spark.node import Node
 from park.envs.spark.task import Task
 from park.envs.spark.job_graph import add_job_in_graph, remove_job_from_graph
 
@@ -197,9 +198,58 @@ class SparkEnv(core.Env):
         return executor_limit
 
     def observe(self):
-        return self.job_dags, self.source_job, self.num_source_exec, \
-               self.get_frontier_nodes(), self.get_executor_limits(), \
-               self.exec_commit, self.moving_executors, self.action_map
+        # valid set of nodes
+        frontier_nodes = self.get_frontier_nodes()
+
+        # sort out the exec_map (where the executors are)
+        exec_map = {}
+        for job_dag in self.job_dags:
+            exec_map[job_dag] = len(job_dag.executors)
+        # count in moving executors
+        for node in self.moving_executors.moving_executors.values():
+            exec_map[node.job_dag] += 1
+        # count in executor commit
+        for s in self.exec_commit.commit:
+            if isinstance(s, JobDAG):
+                j = s
+            elif isinstance(s, Node):
+                j = s.job_dag
+            elif s is None:
+                j = None
+            else:
+                print('source', s, 'unknown')
+                exit(1)
+            for n in self.exec_commit.commit[s]:
+                if n is not None and n.job_dag != j:
+                    exec_map[n.job_dag] += self.exec_commit.commit[s][n]
+
+        for job_dag in self.job_dags:
+            for node in job_dag.nodes:
+                feature = np.zeros([6])
+                # number of executors already in the job
+                feature[0] = exec_map[job_dag]
+                # source executor is from the current job (locality)
+                feature[1] = job_dag is self.source_job
+                # number of source executors
+                feature[2] = self.num_source_exec
+                # remaining number of tasks in the node
+                feature[3] = node.num_tasks - node.next_task_idx
+                # average task duration of the node
+                feature[4] = node.tasks[-1].duration
+                # is the current node valid
+                feature[5] = node in frontier_nodes
+
+                # update feature in observation
+                self.graph.update_nodes({node: feature})
+
+        # update mask in the action space
+        self.action_space[0].update_valid_set(frontier_nodes)
+
+        # return the graph as observation
+        obs = self.graph
+        assert self.observation_space.contains(obs)
+
+        return obs
 
     def saturated(self, node):
         # frontier nodes := unsaturated nodes with all parent nodes saturated
@@ -261,7 +311,11 @@ class SparkEnv(core.Env):
                 # node is already saturated, use backup logic
                 self.backup_schedule(executor)
 
-    def step(self, next_node, limit):
+    def step(self, action):
+
+        assert self.action_space.contains(action)
+
+        next_node, limit = action
 
         # mark the node as selected
         assert next_node not in self.node_selected
@@ -385,7 +439,7 @@ class SparkEnv(core.Env):
             assert self.wall_time.curr_time >= self.max_time or \
                    len(self.job_dags) == 0
 
-        return self.observe(), reward, done
+        return self.observe(), reward, done, None
 
     def remove_job(self, job_dag):
         for executor in list(job_dag.executors):
@@ -436,8 +490,8 @@ class SparkEnv(core.Env):
         # a warning message will show up every time e.g., the observation falls
         # out of the observation space
         self.graph = DirectedGraph()
-        self.obs_node_low = np.array([0] * 5)
-        self.obs_node_high = np.array([config.exec_cap, 1, config.exec_cap, 1000000, 500])
+        self.obs_node_low = np.array([0] * 6)
+        self.obs_node_high = np.array([config.exec_cap, 1, config.exec_cap, 1000, 100000, 1])
         self.obs_edge_low = self.obs_edge_high = np.array([])  # features on nodes only
         self.observation_space = spaces.Graph(
             node_low=self.obs_node_low, node_high=self.obs_node_high,

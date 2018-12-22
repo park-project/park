@@ -41,4 +41,5 @@ class Graph(core.Space):
                          (node_features <= self.node_high).all() and \
                          (edge_features >= self.edge_low).all() and \
                          (edge_features <= self.edge_high).all()
+
         return is_element

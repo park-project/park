@@ -12,6 +12,9 @@ class Tuple(core.Space):
         self.spaces = spaces
         core.Space.__init__(self, None, None)
 
+    def __getitem__(self, idx):
+        return self.spaces[idx]
+
     def sample(self):
         return tuple([space.sample() for space in self.spaces])
 

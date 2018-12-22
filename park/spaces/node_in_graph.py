@@ -1,6 +1,6 @@
 import numpy as np
 from park import core
-from park.spaces.rng import np_random, nrng
+from park.spaces.rng import np_random
 from park.utils.directed_graph import DirectedGraph
 
 
@@ -12,18 +12,26 @@ class NodeInGraph(core.Space):
         if graph is not None:
             assert type(graph) == DirectedGraph
         self.graph = graph
+        self.valid_set = None
         core.Space.__init__(self, 'graph_float32', (), np.float32)
 
-    def update_graph(graph):
+    def update_graph(self, graph):
         assert type(graph) == DirectedGraph
         self.graph = graph
 
-    def sample(self, valid_list=None):
-        if valid_list is None:
-            return nrng.choice(self.graph.nodes)
+    def update_valid_set(self, valid_set):
+        self.valid_set = valid_set
+
+    def sample(self):
+        if self.valid_set is None:
+            nodes = list(self.graph.nodes)
         else:
-            assert len(valid_list) <= len(self.graph.nodes)
-            return valid_list[np_random.randint(len(valid_list))]
+            assert len(self.valid_set) <= self.graph.number_of_nodes()
+            nodes = list(self.valid_set)
+        return nodes[np_random.randint(len(nodes))]
 
     def contains(self, x):
-        return self.graph.has_node(x)
+        if self.valid_set is None:
+            return self.graph.has_node(x)
+        else:
+            return (x in self.valid_set)

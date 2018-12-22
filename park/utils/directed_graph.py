@@ -40,6 +40,12 @@ class DirectedGraph(object):
     def edges(self):
         return self.graph.edges
 
+    def number_of_nodes(self):
+        return self.graph.number_of_nodes()
+
+    def number_of_edges(self):
+        return self.graph.number_of_edges()
+
     def get_node_features_tensor(self):
         node_features = []
         node_map = {}
