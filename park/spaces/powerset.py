@@ -2,10 +2,9 @@ import numpy as np
 from park import core
 from park.spaces.rng import np_random
 
-
-class Set(core.Space):
+class PowerSet(core.Space):
     """
-    The element of this space is an element in the set.
+    The element of this space is an element in the power set of the given set.
     The space can change its size during execution (e.g., a node
     being added into the graph, an edge being deleted from a graph)
     """
@@ -32,5 +31,15 @@ class Set(core.Space):
         return tmp_list[idx]
 
     def contains(self, x):
-        return x in self.set
-        
+        '''
+        @x: if it is an array, then check if each element is part of this
+        space. If it is a set, then just check if that is a part of the space
+        '''
+        if isinstance(x, set):
+            return x.isubset(self.set)
+        elif isinstance(x, np.ndarray):
+            for xi in x:
+                if not xi.issubset(self.set):
+                    return False
+            return True
+
