@@ -56,4 +56,26 @@ parser.add_argument('--moving_delay', type=int, default=2000,
 parser.add_argument('--warmup_delay', type=int, default=1000,
                     help='Executor warming up delay (milliseconds) (default: 1000)')
 
+# -- Query Optimizer --
+parser.add_argument('--qopt_port', type=int, default=2654,
+                    help="port for communicaton with calcite backend")
+## TODO: describe these better
+parser.add_argument('--qopt_query', type=int, default=0,
+                    help="query to run")
+parser.add_argument('--qopt_train', type=int, default=1,
+                    help="0 or 1, to run in training mode or test mode")
+parser.add_argument('--qopt_only_final_reward', type=int,default=0, help="0 or 1")
+parser.add_argument('--qopt_lopt', type=int,default=0, help="0 or 1")
+parser.add_argument('--qopt_exh', type=int,default=0, help="0 or 1")
+parser.add_argument('--qopt_verbose', type=int,default=0, help="0 or 1")
+parser.add_argument('--qopt_left_deep', type=int,default=0, help="0 or 1")
+parser.add_argument('--qopt_execute_on_db', type=int,default=0, help="0 or 1")
+
+parser.add_argument('--qopt_reward_normalization', type=str, required=False,
+                            default='min_max', help='type of reward normalization')
+parser.add_argument('--qopt_cost_model', type=str, required=False,
+                            default='rowCount', help='')
+parser.add_argument('--qopt_dataset', type=str, required=False,
+                            default='JOB', help='')
+
 config = parser.parse_args()
