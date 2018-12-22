@@ -22,3 +22,8 @@ register(
     env_id='spark',
     entry_point='park.envs.spark:SparkEnv',
 )
+
+register(
+    env_id='query_optimizer',
+    entry_point='park.envs.query_optimizer:QueryOptEnv',
+)
