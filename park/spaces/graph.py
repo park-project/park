@@ -37,9 +37,18 @@ class Graph(core.Space):
             node_features, _ = x.get_node_features_tensor()
             edge_features, _ = x.get_edge_features_tensor()
 
-            is_element = (node_features >= self.node_low).all() and \
-                         (node_features <= self.node_high).all() and \
-                         (edge_features >= self.edge_low).all() and \
-                         (edge_features <= self.edge_high).all()
+            node_check = self.node_low is None or \
+                         self.node_high is None or \
+                         len(node_features) == 0 or \
+                         ((node_features >= self.node_low).all() and \
+                         (node_features <= self.node_high).all())
+
+            edge_check = self.edge_low is None or \
+                         self.edge_high is None or \
+                         len(edge_features) == 0 or \
+                         ((edge_features >= self.edge_low).all() and \
+                         (edge_features <= self.edge_high).all())
+
+            is_element = node_check and edge_check
 
         return is_element
