@@ -334,7 +334,7 @@ class SparkEnv(core.Env):
                            self.moving_executors.count(next_node), limit,
                            self.num_source_exec)
         else:
-            use_exec = limit
+            use_exec = self.num_source_exec
 
         assert use_exec > 0
 

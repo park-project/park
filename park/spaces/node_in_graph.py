@@ -28,10 +28,19 @@ class NodeInGraph(core.Space):
         else:
             assert len(self.valid_set) <= self.graph.number_of_nodes()
             nodes = list(self.valid_set)
-        return nodes[np_random.randint(len(nodes))]
+
+        if len(nodes) > 0:
+            return nodes[np_random.randint(len(nodes))]
+        else:
+            return None
 
     def contains(self, x):
         if self.valid_set is None:
             return self.graph.has_node(x)
         else:
-            return (x in self.valid_set)
+            if x is None:
+                # no valid action exists because
+                # valid set is empty
+                return len(self.valid_set) == 0
+            else:
+                return (x in self.valid_set)

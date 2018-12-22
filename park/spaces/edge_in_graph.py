@@ -28,10 +28,19 @@ class EdgeInGraph(core.Space):
         else:
             assert len(self.valid_set) <= self.graph.number_of_edges()
             edges = list(self.valid_set)
-        return edges[np_random.randint(len(edges))]
+
+        if len(edges) > 0:
+            return edges[np_random.randint(len(edges))]
+        else:
+            return None
 
     def contains(self, x):
         if self.valid_set is None:
             return self.graph.has_edge(x)
         else:
-            return (x in self.valid_set)
+            if x is None:
+                # no valid action exists because
+                # valid set is empty
+                return len(self.valid_set) == 0
+            else:
+                return (x in self.valid_set)
