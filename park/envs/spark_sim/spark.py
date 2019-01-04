@@ -22,7 +22,7 @@ from park.envs.spark_sim.task import Task
 from park.envs.spark_sim.job_graph import add_job_in_graph, remove_job_from_graph
 
 
-class SparkEnv(core.Env):
+class SparkSimEnv(core.Env):
     """
     A trace-driven simulator for the dynamics of the scheduling module in Apache Spark.
     The intricacies to closely simulate the system in reality are mainly (1) the "moving

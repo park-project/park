@@ -1,14 +1,15 @@
 import numpy as np
+import zipfile
+from sys import platform
 from collections import deque
 
+import park
 from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
-from park.envs.abr_sim.trace_loader import \
-    load_traces, load_chunk_sizes, sample_trace, get_chunk_time
 
 
-class ABRSimEnv(core.Env):
+class ABREnv(core.Env):
     """
     Adapt bitrate during a video playback with varying network conditions.
     The objective is to (1) reduce stall (2) increase video quality and
@@ -51,6 +52,37 @@ class ABRSimEnv(core.Env):
         https://dl.acm.org/citation.cfm?id=2787486
     """
     def __init__(self):
+        # check if the operating system is ubuntu
+        if platform != 'linux' and platform != 'linux2':
+            raise OSError('Real ABR environment only tested with Ubuntu 16.04.')
+
+        # check/download the video files
+        if not os.path.exists(park.__path__[0] + '/envs/abr/video_server/'):
+            wget.download(
+                'https://www.dropbox.com/s/t1igk37y4qtmtgt/video_server.zip?dl=1',
+                out=park.__path__[0] + '/envs/abr/')
+            with zipfile.ZipFile(
+                 park.__path__[0] + '/envs/abr/video_server.zip', 'r') as zip_f:
+                zip_f.extractall(park.__path__[0] + '/envs/abr/')
+
+        # check/download the browser files
+        if not os.path.exists(park.__path__[0] + '/envs/abr/abr_browser_dir/'):
+            wget.download(
+                'https://www.dropbox.com/s/a3vadqokeg3x60l/abr_browser_dir.zip?dl=1',
+                out=park.__path__[0] + '/envs/abr/')
+            with zipfile.ZipFile(
+                 park.__path__[0] + '/envs/abr/abr_browser_dir.zip', 'r') as zip_f:
+                zip_f.extractall(park.__path__[0] + '/envs/abr/')
+
+        # check/download the trace files
+        if not os.path.exists(park.__path__[0] + '/envs/abr/cooked_traces/'):
+            wget.download(
+                'https://www.dropbox.com/s/qw0tmgayh5d6714/cooked_traces.zip?dl=1',
+                out=park.__path__[0] + '/envs/abr/')
+            with zipfile.ZipFile(
+                 park.__path__[0] + '/envs/abr/cooked_traces.zip', 'r') as zip_f:
+                zip_f.extractall(park.__path__[0] + '/envs/abr/')
+
         # observation and action space
         self.setup_space()
         # load all trace files

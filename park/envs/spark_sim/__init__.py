@@ -1,1 +1,1 @@
-from park.envs.spark_sim.spark import SparkEnv
+from park.envs.spark_sim.spark import SparkSimEnv

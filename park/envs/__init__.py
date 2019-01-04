@@ -10,7 +10,7 @@ register(
 
 register(
     env_id='abr_sim',
-    entry_point='park.envs.abr_sim:ABREnv',
+    entry_point='park.envs.abr_sim:ABRSimEnv',
 )
 
 register(
@@ -20,7 +20,7 @@ register(
 
 register(
     env_id='spark_sim',
-    entry_point='park.envs.spark_sim:SparkEnv',
+    entry_point='park.envs.spark_sim:SparkSimEnv',
 )
 
 register(
