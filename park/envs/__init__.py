@@ -9,8 +9,8 @@ register(
 )
 
 register(
-    env_id='abr',
-    entry_point='park.envs.abr:ABREnv',
+    env_id='abr_sim',
+    entry_point='park.envs.abr_sim:ABREnv',
 )
 
 register(

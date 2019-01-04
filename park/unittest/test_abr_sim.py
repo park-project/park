@@ -2,10 +2,10 @@ import unittest
 from park.unittest.run_env import run_env_with_random_agent
 
 
-class TestABR(unittest.TestCase):
+class TestABRSim(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.env_name = 'abr'
+        self.env_name = 'abr_sim'
 
     def test_run_env_n_times(self, n=10):
         for _ in range(n):

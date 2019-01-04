@@ -4,7 +4,7 @@ from collections import deque
 from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
-from park.envs.abr.trace_loader import \
+from park.envs.abr_sim.trace_loader import \
     load_traces, load_chunk_sizes, sample_trace, get_chunk_time
 
 

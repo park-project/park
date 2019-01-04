@@ -24,7 +24,7 @@ def load_chunk_sizes():
     # https://github.com/hongzimao/pensieve/tree/master/video_server
 
     # download video size folder if not existed
-    video_folder = park.__path__[0] + '/envs/abr/videos/'
+    video_folder = park.__path__[0] + '/envs/abr_sim/videos/'
     create_folder_if_not_exists(video_folder)
     if not os.path.exists(video_folder + 'video_sizes.npy'):
         wget.download(
@@ -38,15 +38,15 @@ def load_chunk_sizes():
 
 def load_traces():
     # download video size folder if not existed
-    trace_folder = park.__path__[0] + '/envs/abr/traces/'
+    trace_folder = park.__path__[0] + '/envs/abr_sim/traces/'
 
     if not os.path.exists(trace_folder):
         wget.download(
             'https://www.dropbox.com/s/xdlvykz9puhg5xd/cellular_traces.zip?dl=1',
-            out=park.__path__[0] + '/envs/abr/')
+            out=park.__path__[0] + '/envs/abr_sim/')
         with zipfile.ZipFile(
-             park.__path__[0] + '/envs/abr/cellular_traces.zip', 'r') as zip_f:
-            zip_f.extractall(park.__path__[0] + '/envs/abr/')
+             park.__path__[0] + '/envs/abr_sim/cellular_traces.zip', 'r') as zip_f:
+            zip_f.extractall(park.__path__[0] + '/envs/abr_sim/')
 
     all_traces = []
 
