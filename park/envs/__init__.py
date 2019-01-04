@@ -27,3 +27,8 @@ register(
     env_id='query_optimizer',
     entry_point='park.envs.query_optimizer:QueryOptEnv',
 )
+
+register(
+    env_id='abr',
+    entry_point='park.envs.abr:ABREnv',
+)
