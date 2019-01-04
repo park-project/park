@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from park.utils.ordered_set import OrderedSet
 from park.param import config
-from park.envs.spark.node import NodeDuration
+from park.envs.spark_sim.node import NodeDuration
 
 
 class JobDAG(object):

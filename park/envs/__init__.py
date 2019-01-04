@@ -19,8 +19,8 @@ register(
 )
 
 register(
-    env_id='spark',
-    entry_point='park.envs.spark:SparkEnv',
+    env_id='spark_sim',
+    entry_point='park.envs.spark_sim:SparkEnv',
 )
 
 register(

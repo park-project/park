@@ -7,19 +7,19 @@ from park.param import config
 from park.utils import seeding
 from park.utils.ordered_set import OrderedSet
 from park.utils.directed_graph import DirectedGraph
-from park.envs.spark.action_map import compute_act_map, get_frontier_acts
-from park.envs.spark.reward_calculator import RewardCalculator
-from park.envs.spark.moving_executors import MovingExecutors
-from park.envs.spark.executor_commit import ExecutorCommit
-from park.envs.spark.free_executors import FreeExecutors
-from park.envs.spark.job_generator import generate_jobs
-from park.envs.spark.wall_time import WallTime
-from park.envs.spark.timeline import Timeline
-from park.envs.spark.executor import Executor
-from park.envs.spark.job_dag import JobDAG
-from park.envs.spark.node import Node
-from park.envs.spark.task import Task
-from park.envs.spark.job_graph import add_job_in_graph, remove_job_from_graph
+from park.envs.spark_sim.action_map import compute_act_map, get_frontier_acts
+from park.envs.spark_sim.reward_calculator import RewardCalculator
+from park.envs.spark_sim.moving_executors import MovingExecutors
+from park.envs.spark_sim.executor_commit import ExecutorCommit
+from park.envs.spark_sim.free_executors import FreeExecutors
+from park.envs.spark_sim.job_generator import generate_jobs
+from park.envs.spark_sim.wall_time import WallTime
+from park.envs.spark_sim.timeline import Timeline
+from park.envs.spark_sim.executor import Executor
+from park.envs.spark_sim.job_dag import JobDAG
+from park.envs.spark_sim.node import Node
+from park.envs.spark_sim.task import Task
+from park.envs.spark_sim.job_graph import add_job_in_graph, remove_job_from_graph
 
 
 class SparkEnv(core.Env):

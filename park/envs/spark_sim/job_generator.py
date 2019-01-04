@@ -5,21 +5,21 @@ import park
 import numpy as np
 from park.param import config
 from park.utils.ordered_set import OrderedSet
-from park.envs.spark.task import Task
-from park.envs.spark.node import Node
-from park.envs.spark.job_dag import JobDAG
-from park.envs.spark.set_with_count import SetWithCount
+from park.envs.spark_sim.task import Task
+from park.envs.spark_sim.node import Node
+from park.envs.spark_sim.job_dag import JobDAG
+from park.envs.spark_sim.set_with_count import SetWithCount
 
 
 def load_job(query_size, query_idx, wall_time, np_random):
-    file_path = park.__path__[0] + '/envs/spark/traces/'
+    file_path = park.__path__[0] + '/envs/spark_sim/traces/'
     if not os.path.exists(file_path):
         wget.download(
                 'https://www.dropbox.com/s/pmoivv5eg9ldmfn/traces.zip?dl=1',
-                out=park.__path__[0] + '/envs/spark/')
+                out=park.__path__[0] + '/envs/spark_sim/')
         with zipfile.ZipFile(
-             park.__path__[0] + '/envs/spark/traces.zip', 'r') as zip_f:
-            zip_f.extractall(park.__path__[0] + '/envs/spark/')
+             park.__path__[0] + '/envs/spark_sim/traces.zip', 'r') as zip_f:
+            zip_f.extractall(park.__path__[0] + '/envs/spark_sim/')
 
     query_path = file_path + query_size + '/'
     
