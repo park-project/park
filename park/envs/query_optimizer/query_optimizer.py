@@ -1,3 +1,4 @@
+import park
 from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
@@ -14,13 +15,9 @@ class QueryOptEnv(core.Env):
     TODO: describe
     """
     def __init__(self):
-        print("Query Opt Env being initialized!!!")
-        # FIXME: do we need to even call this here?
-        # self._setup_space()
-        # self.graph = DirectedGraph()
-
+        self._install_dependencies()
         # start calcite + java server
-        print("port = ", config.qopt_port)
+        logger.info("port = " + str(config.qopt_port))
         self._start_java_server()
 
         # initialize the ZeroMQ based communication system with the backend
@@ -28,7 +25,7 @@ class QueryOptEnv(core.Env):
         # port = get_port()
         context = zmq.Context()
         #  Socket to talk to server
-        print("Going to connect to calcite server")
+        logger.info("Going to connect to calcite server")
         self.socket = context.socket(zmq.PAIR)
         self.socket.connect("tcp://localhost:" + str(config.qopt_port))
         self.reward_normalization = config.qopt_reward_normalization
@@ -40,6 +37,10 @@ class QueryOptEnv(core.Env):
         # TODO: describe spaces
         self.graph = None
         self.action_space = None
+        # here, we specify the edge to choose next to calcite using the
+        # position in the edge array
+        # this will be updated every time we use _observe
+        self._edge_pos_map = None
 
         self.query_set = self._send("getCurQuerySet")
         print("query set: " + self.query_set)
@@ -62,13 +63,40 @@ class QueryOptEnv(core.Env):
         # setup space with the new graph
         self._setup_space()
 
+    def _install_dependencies(self):
+        """
+         - Install backend database (e.g., postgres) (if needed)
+         - download + load dataset (imdb)
+            - for postgres, can just use ryan's script
+            - TODO: handling different databases properly
+         - start database server
+            - TODO: options for postgres data dir. Default to a directory in
+              park's installation directory right now
+         - clone OR pull latest version from query-optimizer github repo
+            - TODO: auth?
+            - set path appropriately to run java stuff
+
+         FIXME:
+            - instead of using queries from github, should download them
+              separately. Ideally, can just use original JOB queries
+            -
+        """
+        logger.info("installing dependencies for query optimizer")
+        base_dir = park.__path__[0]
+
+        # Check if postgres is installed:
+        # which postgres
+
+        # start postgres at given data directory
+
+        # check if imdb db already exists:
+        # psql -lqt | cut -d \| -f 1 | grep "imdb"
+
+
     def reset(self):
-        print("reset")
         query = self._send("reset")
         # TODO: set up min-max etc.
-        print("query is: ", query)
-        self.graph = self._observe()
-        self.action_space.update_graph(self.graph)
+        self._observe()
 
         # return the first observation
         return self.graph
@@ -77,11 +105,26 @@ class QueryOptEnv(core.Env):
         '''
         TODO: describe elements.
         '''
-        print("step!")
-        print("action: ", action)
         assert self.action_space.contains(action)
+        assert action in self._edge_pos_map
+        action_index = self._edge_pos_map[action]
 
-        return None, None, None, None
+        # will make multiple zeromq calls to specify each part of the step
+        # operation.
+        self._send("step")
+        self._send(str(action_index))
+        # at this point, the calcite server would have specified the next edge
+        # to be chosen in the query graph. Then, it will continue executing,
+        # and block when the reward has been set
+
+        # ask for reward, and updated observation
+        self._observe()
+
+        reward = float(self._send("getReward"))
+        # TODO: add normalization
+        # reward = self.normalize_reward(reward)
+        done = int(self._send("isDone"))
+        return self.graph, reward, done, None
 
     def seed(self, seed):
         print("seed! not implemented yet")
@@ -95,7 +138,7 @@ class QueryOptEnv(core.Env):
         '''
         TODO: more details
         gets the current query graph from calcite, and updates self.graph and
-        the spaces accordingly.
+        the action space accordingly.
         '''
         # get first observation
         vertexes = self._send("getQueryGraph")
@@ -113,17 +156,20 @@ class QueryOptEnv(core.Env):
         if config.qopt_only_attr_features:
             for v in vertexes:
                 graph.update_nodes({v["id"] : v["visibleAttributes"]})
-
-            for e in edges:
+            self._edge_pos_map = {}
+            for i, e in enumerate(edges):
                 graph.update_edges({tuple(e["factors"]) : e["joinAttributes"]})
+                self._edge_pos_map[tuple(e["factors"])] = i
         else:
             assert False, "no other featurization scheme supported right now"
         assert self.observation_space.contains(graph)
-        return graph
+        self.graph = graph
+
+        # update the possible actions we have - should be at least one fewer
+        # action since we just removed an edge
+        self.action_space.update_graph(self.graph)
 
     def _setup_space(self):
-        print('setup space!')
-        # TODO: set the features
         node_feature_space = spaces.PowerSet(set(range(self.attr_count)))
         edge_feature_space = spaces.PowerSet(set(range(self.attr_count)))
         self.observation_space = spaces.Graph(node_feature_space,
