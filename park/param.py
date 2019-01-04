@@ -80,4 +80,4 @@ parser.add_argument('--qopt_cost_model', type=str, required=False,
 parser.add_argument('--qopt_dataset', type=str, required=False,
                             default='JOB', help='')
 
-config = parser.parse_args()
+config, _ = parser.parse_known_args()
