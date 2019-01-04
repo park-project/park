@@ -1,4 +1,5 @@
 import os
+import wget
 import zipfile
 import numpy as np
 from sys import platform
