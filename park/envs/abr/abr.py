@@ -85,6 +85,10 @@ class ABREnv(core.Env):
                  park.__path__[0] + '/envs/abr/cooked_traces.zip', 'r') as zip_f:
                 zip_f.extractall(park.__path__[0] + '/envs/abr/')
 
+        # check if the manifest file is copied to the right place (last step in setup.py)
+        if not os.path.exists('/var/www/html/Manifest.mpd'):
+            os.system('python3 ' + park.__path__[0] + '/envs/abr/setup.py')
+
         # observation and action space
         self.setup_space()
         # load all trace files
