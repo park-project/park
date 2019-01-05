@@ -117,6 +117,8 @@ class ABRSimEnv(core.Env):
             self.past_chunk_throughputs.append(0)
             self.past_chunk_download_times.append(0)
 
+        return self.observe()
+
     def seed(self, seed):
         self.np_random = seeding.np_random(seed)
 
