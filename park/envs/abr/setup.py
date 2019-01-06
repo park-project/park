@@ -28,6 +28,21 @@ os.system("wget 'https://dl.google.com/linux/direct/google-chrome-stable_current
 os.system("sudo dpkg -i google-chrome-stable_current_amd64.deb")
 os.system("sudo apt-get -f -y install")
 
+# zeromq
+os.system("pip3 install --user pyzmq")
+
+# protobuf
+os.system('sudo apt-get -y install autoconf automake libtool curl make g++ unzip')
+os.chdir( start_dir + '/park/envs/abr/' )
+os.system("wget 'https://github.com/protocolbuffers/protobuf/releases/download/v3.3.0/protobuf-python-3.3.0.tar.gz")
+os.system('tar xvzf protobuf-python-3.3.0.tar.gz')
+os.chdir( start_dir + '/park/envs/abr/protobuf-3.3.0/' )
+os.system('./autogen.sh')
+os.system('./configure')
+os.system('make')
+os.system('make check')
+os.system('sudo make install')
+
 # copy the webpage files to /var/www/html
 os.chdir( start_dir )
 os.system("sudo cp park/envs/abr/video_server/myindex_*.html /var/www/html")
