@@ -33,6 +33,9 @@ message IPCMessage {
 
     // reward
     optional float reward = 7;
+
+    // done
+    optional bool done = 8;
 }
 
 // reply message

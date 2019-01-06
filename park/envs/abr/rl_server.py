@@ -126,24 +126,28 @@ def make_request_handler(input_dict):
                 # pass the previous reward
                 self.ipc_msg.reward = reward
 
-                # send message to agent
-                socket.send(ipc_msg.SerializeToString())
-
-                # receive action from the agent
-                reply = socket.recv()
-                self.ipc_reply.ParseFromString(reply)
-                bitrate = self.ipc_reply.action
-
-                # send data to html side
-                send_data = str(bitrate)
-
-                end_of_video = False
+                # end of video or not
                 if ( post_data['lastRequest'] == TOTAL_VIDEO_CHUNKS ):
-                    send_data = "REFRESH"
-                    end_of_video = True
-                    self.input_dict['last_bit_rate'] = DEFAULT_QUALITY
+                    self.ipc_msg.done = True
+                    self.input_dict['last_bit_rate'] = 0
                     self.input_dict['video_chunk_coount'] = 0
-                    self.log_file.write('\n')  # so that in the log we know where video ends
+                else:
+                    self.ipc_msg.done = False
+
+                # send message to agent
+                socket.send(self.ipc_msg.SerializeToString())
+
+                # receive action from the agent if it is not done yet
+                if self.ipc_msg.done:
+                    send_data = "REFRESH"
+
+                else:
+                    reply = socket.recv()
+                    self.ipc_reply.ParseFromString(reply)
+                    bitrate = self.ipc_reply.action
+
+                    # send data to html side
+                    send_data = str(bitrate)
 
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/plain')

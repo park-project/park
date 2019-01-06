@@ -115,6 +115,18 @@ class ABREnv(core.Env):
         assert self.observation_space.contains(self.obs)
         return self.obs
 
+    def parse_msg(self, msg):
+        obs_arr = [msg.bandwidth,
+                   msg.download_time,
+                   msg.buffer_ahead,
+                   msg.remaining_chunks,
+                   msg.prev_bitrate]
+        obs_arr.extend(msg.chunk_size)
+        reward = msg.reward
+        done = msg.done
+
+        return np.array(obs_arr), reward, done
+
     def reset(self):
         self.obs = None
 
@@ -124,11 +136,11 @@ class ABREnv(core.Env):
 
         # reset zeromq ipc channel
         context = zmq.Context()
-        socket = context.socket(zmq.REP)
-        ipc_msg = ipc_msg_pb2.IPCMessage()
-        ipc_reply = ipc_msg_pb2.IPCReply()
+        self.socket = context.socket(zmq.REP)
+        self.ipc_msg = ipc_msg_pb2.IPCMessage()
+        self.ipc_reply = ipc_msg_pb2.IPCReply()
 
-        socket.bind("ipc:///tmp/abr_python_ipc")
+        self.socket.bind("ipc:///tmp/abr_python_ipc")
 
         trace_file = self.np_random.choice(self.all_traces)
 
@@ -143,7 +155,10 @@ class ABREnv(core.Env):
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
         # wait until the real system responses
+        msg = self.socket.recv()
+        self.ipc_msg.ParseFromString(msg)
 
+        self.obs, reward, done = self.parse_msg(self.ipc_msg)
 
         return self.observe()
 
@@ -167,66 +182,13 @@ class ABREnv(core.Env):
         # 0 <= action < num_servers
         assert self.action_space.contains(action)
 
-        # Note: sizes are in bytes, times are in seconds
-        chunk_size = self.chunk_sizes[action][self.chunk_idx]
+        self.ipc_reply.action = action
+        self.socket.send(self.ipc_reply.SerializeToString())
 
-        # compute chunk download time based on trace
-        delay = 0  # in seconds
+        # wait until the real system responses
+        msg = self.socket.recv()
+        self.ipc_msg.ParseFromString(msg)
 
-        # keep experiencing the network trace 
-        # until the chunk is downloaded
-        while chunk_size > 1e-8:  # floating number business
+        self.obs, reward, done = self.parse_msg(self.ipc_msg)
 
-            throuput = self.trace[1][self.curr_t_idx] / 8.0 * 1e6  # bytes/second
-
-            chunk_time_used = min(self.chunk_time_left, chunk_size / throuput)
-
-            chunk_size -= throuput * chunk_time_used
-            self.chunk_time_left -= chunk_time_used
-            delay += chunk_time_used
-
-            if self.chunk_time_left == 0:
-                
-                self.curr_t_idx += 1
-                if self.curr_t_idx == len(self.trace[1]):
-                    self.curr_t_idx = 0
-
-                self.chunk_time_left = get_chunk_time(self.trace, self.curr_t_idx)
-
-        # compute buffer size
-        rebuffer_time = max(delay - self.buffer_size, 0)
-
-        # update video buffer
-        self.buffer_size = max(self.buffer_size - delay, 0)
-        self.buffer_size += 4.0  # each chunk is 4 seconds of video
-
-        # cap the buffer size
-        self.buffer_size = min(self.buffer_size, 40.0)
-
-        # bitrate change penalty
-        if self.past_action is None:
-            bitrate_change = 0
-        else:
-            bitrate_change = np.abs(self.bitrate_map[action] - \
-                             self.bitrate_map[self.past_action])
-
-        # linear reward 
-        # (https://dl.acm.org/citation.cfm?id=3098843 section 5.1, QoE metrics (1))
-        reward = self.bitrate_map[action] - 4.3 * rebuffer_time - bitrate_change
-
-        # store action for future bitrate change penalty
-        self.past_action = action
-
-        # update observed network bandwidth and duration
-        self.past_chunk_throughputs.append(
-            self.chunk_sizes[action][self.chunk_idx] / float(delay))
-        self.past_chunk_download_times.append(delay)
-
-        # advance video
-        self.chunk_idx += 1
-        done = (self.chunk_idx == self.total_num_chunks)
-
-        return self.observe(), reward, done, \
-               {'bitrate': self.bitrate_map[action],
-                'stall_time': rebuffer_time,
-                'bitrate_change': bitrate_change}
+        return self.observe(), reward, done, {}
