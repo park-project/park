@@ -30,6 +30,9 @@ message IPCMessage {
 
     // number of remaining chunks
     optional int32 remaining_chunks = 6;
+
+    // reward
+    optional float reward = 7;
 }
 
 // reply message

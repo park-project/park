@@ -9,11 +9,11 @@ import base64
 import urllib
 import sys
 import json
+import zmq
+import ipc_msg_pb2
 
 import numpy as np
-import tensorflow as tf
 import time
-import a3c
 
 
 S_INFO = 6  # bit_rate, buffer_size, rebuffering_time, bandwidth_measurement, chunk_til_video_end
@@ -56,14 +56,9 @@ def make_request_handler(input_dict):
     class Request_Handler(BaseHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             self.input_dict = input_dict
-            self.sess = input_dict['sess']
-            self.log_file = input_dict['log_file']
-            self.actor = input_dict['actor']
-            self.critic = input_dict['critic']
-            self.saver = input_dict['saver']
-            self.s_batch = input_dict['s_batch']
-            self.a_batch = input_dict['a_batch']
-            self.r_batch = input_dict['r_batch']
+            self.socket = input_dict['socket']
+            self.ipc_msg = input_dict['ipc_msg']
+            self.ipc_reply = input_dict['ipc_reply']
             BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
         def do_POST(self):
@@ -107,69 +102,45 @@ def make_request_handler(input_dict):
                 #         - 8 * rebuffer_time / M_IN_K - np.abs(BITRATE_REWARD[post_data['lastquality']] - BITRATE_REWARD_MAP[self.input_dict['last_bit_rate']])
 
                 self.input_dict['last_bit_rate'] = VIDEO_BIT_RATE[post_data['lastquality']]
-                self.input_dict['last_total_rebuf'] = post_data['RebufferTime']
-
-                # retrieve previous state
-                if len(self.s_batch) == 0:
-                    state = [np.zeros((S_INFO, S_LEN))]
-                else:
-                    state = np.array(self.s_batch[-1], copy=True)
 
                 # compute bandwidth measurement
-                video_chunk_fetch_time = post_data['lastChunkFinishTime'] - post_data['lastChunkStartTime']
+                video_chunk_fetch_time = max(post_data['lastChunkFinishTime'] - post_data['lastChunkStartTime'], 1)
                 video_chunk_size = post_data['lastChunkSize']
 
                 # compute number of video chunks left
                 video_chunk_remain = TOTAL_VIDEO_CHUNKS - self.input_dict['video_chunk_coount']
                 self.input_dict['video_chunk_coount'] += 1
 
-                # dequeue history record
-                state = np.roll(state, -1, axis=1)
-
                 next_video_chunk_sizes = []
                 for i in xrange(A_DIM):
                     next_video_chunk_sizes.append(get_chunk_size(i, self.input_dict['video_chunk_coount']))
 
-                # this should be S_INFO number of terms
-                try:
-                    state[0, -1] = VIDEO_BIT_RATE[post_data['lastquality']] / float(np.max(VIDEO_BIT_RATE))
-                    state[1, -1] = post_data['buffer'] / BUFFER_NORM_FACTOR
-                    state[2, -1] = float(video_chunk_size) / float(video_chunk_fetch_time) / M_IN_K  # kilo byte / ms
-                    state[3, -1] = float(video_chunk_fetch_time) / M_IN_K / BUFFER_NORM_FACTOR  # 10 sec
-                    state[4, :A_DIM] = np.array(next_video_chunk_sizes) / M_IN_K / M_IN_K  # mega byte
-                    state[5, -1] = np.minimum(video_chunk_remain, CHUNK_TIL_VIDEO_END_CAP) / float(CHUNK_TIL_VIDEO_END_CAP)
-                except ZeroDivisionError:
-                    # this should occur VERY rarely (1 out of 3000), should be a dash issue
-                    # in this case we ignore the observation and roll back to an eariler one
-                    if len(self.s_batch) == 0:
-                        state = [np.zeros((S_INFO, S_LEN))]
-                    else:
-                        state = np.array(self.s_batch[-1], copy=True)
+                # pass state observation and reward to agent
+                self.ipc_msg.prev_bitrate = VIDEO_BIT_RATE[post_data['lastquality']]
+                self.ipc_msg.buffer_ahead = post_data['buffer']
+                self.ipc_msg.bandwidth = float(video_chunk_size) / float(video_chunk_fetch_time) / M_IN_K  # mega byte / sec
+                self.ipc_msg.download_time = float(video_chunk_fetch_time) / M_IN_K  # sec
+                self.ipc_msg.chunk_size = next_video_chunk_sizes
+                self.ipc_msg.remaining_chunks = np.minimum(video_chunk_remain, CHUNK_TIL_VIDEO_END_CAP)
 
-                # log wall_time, bit_rate, buffer_size, rebuffer_time, video_chunk_size, download_time, reward
-                self.log_file.write(str(time.time()) + '\t' +
-                                    str(VIDEO_BIT_RATE[post_data['lastquality']]) + '\t' +
-                                    str(post_data['buffer']) + '\t' +
-                                    str(rebuffer_time / M_IN_K) + '\t' +
-                                    str(video_chunk_size) + '\t' +
-                                    str(video_chunk_fetch_time) + '\t' +
-                                    str(reward) + '\n')
-                self.log_file.flush()
+                # pass the previous reward
+                self.ipc_msg.reward = reward
 
-                action_prob = self.actor.predict(np.reshape(state, (1, S_INFO, S_LEN)))
-                action_cumsum = np.cumsum(action_prob)
-                bit_rate = (action_cumsum > np.random.randint(1, RAND_RANGE) / float(RAND_RANGE)).argmax()
-                # Note: we need to discretize the probability into 1/RAND_RANGE steps,
-                # because there is an intrinsic discrepancy in passing single state and batch states
+                # send message to agent
+                socket.send(ipc_msg.SerializeToString())
+
+                # receive action from the agent
+                reply = socket.recv()
+                self.ipc_reply.ParseFromString(reply)
+                bitrate = self.ipc_reply.action
 
                 # send data to html side
-                send_data = str(bit_rate)
+                send_data = str(bitrate)
 
                 end_of_video = False
                 if ( post_data['lastRequest'] == TOTAL_VIDEO_CHUNKS ):
                     send_data = "REFRESH"
                     end_of_video = True
-                    self.input_dict['last_total_rebuf'] = 0
                     self.input_dict['last_bit_rate'] = DEFAULT_QUALITY
                     self.input_dict['video_chunk_coount'] = 0
                     self.log_file.write('\n')  # so that in the log we know where video ends
@@ -180,14 +151,6 @@ def make_request_handler(input_dict):
                 self.send_header('Access-Control-Allow-Origin', "*")
                 self.end_headers()
                 self.wfile.write(send_data)
-
-                # record [state, action, reward]
-                # put it here after training, notice there is a shift in reward storage
-
-                if end_of_video:
-                    self.s_batch = [np.zeros((S_INFO, S_LEN))]
-                else:
-                    self.s_batch.append(state)
 
         def do_GET(self):
             print(sys.stderr, 'GOT REQ')
@@ -210,7 +173,15 @@ def run(server_class=HTTPServer, port=8333):
 
     assert len(VIDEO_BIT_RATE) == A_DIM
 
-    input_dict = {}
+    context = zmq.Context()
+    socket = context.socket(zmq.REQ)
+    ipc_msg = ipc_msg_pb2.IPCMessage()
+    ipc_reply = ipc_msg_pb2.IPCReply()
+
+    socket.bind("ipc:///tmp/abr_python_ipc")
+
+    input_dict = {'socket': socket, 'ipc_msg': ipc_msg, 'ipc_reply': ipc_reply,
+                  'last_bit_rate': 0, 'video_chunk_coount': 0}
 
     # interface to abr_rl server
     handler_class = make_request_handler(input_dict=input_dict)
