@@ -1,9 +1,13 @@
 import os
+import zmq
+import json
 import wget
+import urllib
 import zipfile
+import subprocess
+import ipc_msg_pb2
 import numpy as np
 from sys import platform
-from collections import deque
 
 import park
 from park import core, spaces, logger
@@ -91,69 +95,57 @@ class ABREnv(core.Env):
 
         # observation and action space
         self.setup_space()
-        # load all trace files
-        self.all_traces = load_traces()
-        # load all video chunk sizes
-        self.chunk_sizes = load_chunk_sizes()
-        # mapping between action and bitrate level
-        self.bitrate_map = [0.3, 0.75, 1.2, 1.85, 2.85, 4.3]  # Mbps
-        # how many past throughput to report
-        self.past_chunk_len = 8
-        # assert number of chunks for different bitrates are all the same
-        assert len(np.unique([len(chunk_size) for \
-               chunk_size in self.chunk_sizes])) == 1
-        self.total_num_chunks = len(self.chunk_sizes[0])
+
+        # load all trace file names
+        self.all_traces = os.listdir(park.__path__[0] + '/envs/abr/cooked_traces/')
+
+        # reset protobuf
+        os.system('rm ' + park.__path__[0] + '/envs/abr/ipc_msg_pb2.py')
+        os.system('protoc -I=' + park.__path__[0] + '/envs/abr/' +
+                  '--python_out=' + park.__path__[0] + '/envs/abr/' +
+                  ' ' + park.__path__[0] + '/envs/abr/ipc_msg.proto')
+
+        # random seed
+        self.seed(config.seed)
+
+        # observation is reported from the system side
+        self.obs = None
 
     def observe(self):
-        if self.chunk_idx < self.total_num_chunks:
-            valid_chunk_idx = self.chunk_idx
-        else:
-            valid_chunk_idx = 0
-
-        if self.past_action is not None:
-            valid_past_action = self.past_action
-        else:
-            valid_past_action = 0
-
-        # network throughput of past chunk, past chunk download time,
-        # current buffer, number of chunks left and the last bitrate choice
-        obs_arr = [self.past_chunk_throughputs[-1],
-                   self.past_chunk_download_times[-1],
-                   self.buffer_size,
-                   self.total_num_chunks - self.chunk_idx,
-                   valid_past_action]
-
-        # current chunk size of different bitrates
-        obs_arr.extend(self.chunk_sizes[i][valid_chunk_idx] for i in range(6))
-
-        # fit in observation space
-        for i in range(len(obs_arr)):
-            if obs_arr[i] > self.obs_high[i]:
-                logger.warn('Observation at index ' + str(i) +
-                    ' at chunk index ' + str(self.chunk_idx) +
-                    ' has value ' + str(obs_arr[i]) +
-                    ', which is larger than obs_high ' +
-                    str(self.obs_high[i]))
-                obs_arr[i] = self.obs_high[i]
-
-        obs_arr = np.array(obs_arr)
-        assert self.observation_space.contains(obs_arr)
-
-        return obs_arr
+        assert self.observation_space.contains(self.obs)
+        return self.obs
 
     def reset(self):
-        self.trace, self.curr_t_idx = \
-            sample_trace(self.all_traces)
-        self.chunk_time_left = get_chunk_time(
-            self.trace, self.curr_t_idx)
-        self.chunk_idx = 0
-        self.buffer_size = 0.0  # initial download time not counted
-        self.past_action = None
-        self.past_chunk_throughputs = deque(maxlen=self.past_chunk_len)
-        self.past_chunk_download_times = deque(maxlen=self.past_chunk_len)
-        for _ in range(self.past_chunk_len):
-            self.past_chunk_throughputs.append(0)
-            self.past_chunk_download_times.append(0)
+        self.obs = None
+
+        # kill all previously running programs
+        os.system("ps aux | grep -ie mahimahi | awk '{print $2}' | xargs kill -9")
+        os.system("ps aux | grep -ie abr | awk '{print $2}' | xargs kill -9")
+
+        # reset zeromq ipc channel
+        context = zmq.Context()
+        socket = context.socket(zmq.REP)
+        ipc_msg = ipc_msg_pb2.IPCMessage()
+        ipc_reply = ipc_msg_pb2.IPCReply()
+
+        socket.bind("ipc:///tmp/abr_python_ipc")
+
+        trace_file = self.np_random.choice(self.all_traces)
+
+        ip_data = json.loads(urllib.urlopen("http://ip.jsontest.com/").read())
+        ip = str(ip_data['ip'])
+
+        # start real ABR environment
+        subprocess.Popen('mm-delay 40' +
+                         ' mm-link 12mbps ' + park.__path__[0] + '/envs/abr/cooked_traces/' + trace_file +
+                         ' /usr/bin/python run_video.py ' + ip + ' ' +
+                         '320' + ' ' + '0' + ' ' + '1',
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
+        # wait until the real system responses
+
+
+        return self.observe()
 
     def seed(self, seed):
         self.np_random = seeding.np_random(seed)
