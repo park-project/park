@@ -29,7 +29,7 @@ os.system("sudo dpkg -i google-chrome-stable_current_amd64.deb")
 os.system("sudo apt-get -f -y install")
 
 # zeromq
-os.system("pip3 install --user pyzmq")
+os.system("pip install --user pyzmq")
 
 # protobuf
 os.system('sudo apt-get -y install autoconf automake libtool curl make g++ unzip')

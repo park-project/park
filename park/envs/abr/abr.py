@@ -1,3 +1,6 @@
+# /usr/bin/python
+# python 2.7 only because of protobuf
+
 import os
 import zmq
 import json
@@ -5,7 +8,6 @@ import wget
 import urllib
 import zipfile
 import subprocess
-import ipc_msg_pb2
 import numpy as np
 from sys import platform
 
@@ -13,6 +15,7 @@ import park
 from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
+from park.envs.abr import ipc_msg_pb2
 
 
 class ABREnv(core.Env):
@@ -91,19 +94,13 @@ class ABREnv(core.Env):
 
         # check if the manifest file is copied to the right place (last step in setup.py)
         if not os.path.exists('/var/www/html/Manifest.mpd'):
-            os.system('python3 ' + park.__path__[0] + '/envs/abr/setup.py')
+            os.system('python ' + park.__path__[0] + '/envs/abr/setup.py')
 
         # observation and action space
         self.setup_space()
 
         # load all trace file names
         self.all_traces = os.listdir(park.__path__[0] + '/envs/abr/cooked_traces/')
-
-        # reset protobuf
-        os.system('rm ' + park.__path__[0] + '/envs/abr/ipc_msg_pb2.py')
-        os.system('protoc -I=' + park.__path__[0] + '/envs/abr/' +
-                  '--python_out=' + park.__path__[0] + '/envs/abr/' +
-                  ' ' + park.__path__[0] + '/envs/abr/ipc_msg.proto')
 
         # random seed
         self.seed(config.seed)
@@ -131,7 +128,8 @@ class ABREnv(core.Env):
         self.obs = None
 
         # kill all previously running programs
-        os.system("ps aux | grep -ie mahimahi | awk '{print $2}' | xargs kill -9")
+        os.system("ps aux | grep -ie mm-delay | awk '{print $2}' | xargs kill -9")
+        os.system("ps aux | grep -ie mm-link | awk '{print $2}' | xargs kill -9")
         os.system("ps aux | grep -ie abr | awk '{print $2}' | xargs kill -9")
 
         # reset zeromq ipc channel
