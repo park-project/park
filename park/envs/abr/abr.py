@@ -82,6 +82,7 @@ class ABREnv(core.Env):
             with zipfile.ZipFile(
                  park.__path__[0] + '/envs/abr/abr_browser_dir.zip', 'r') as zip_f:
                 zip_f.extractall(park.__path__[0] + '/envs/abr/')
+            os.system('chmod 777 ' + park.__path__[0] + '/envs/abr/abr_browser_dir/chromedriver')
 
         # check/download the trace files
         if not os.path.exists(park.__path__[0] + '/envs/abr/cooked_traces/'):
@@ -147,10 +148,11 @@ class ABREnv(core.Env):
 
         # start real ABR environment
         subprocess.Popen('mm-delay 40' +
-                         ' mm-link 12mbps ' + park.__path__[0] + '/envs/abr/cooked_traces/' + trace_file +
-                         ' /usr/bin/python run_video.py ' + ip + ' ' +
-                         '320' + ' ' + '0' + ' ' + '1',
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            ' mm-link ' + park.__path__[0] + '/envs/abr/12mbps ' +
+            park.__path__[0] + '/envs/abr/cooked_traces/' + trace_file +
+            ' /usr/bin/python ' + park.__path__[0] + '/envs/abr/run_video.py ' +
+            ip + ' ' + '320' + ' ' + '0' + ' ' + '1',
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
         # wait until the real system responses
         msg = self.socket.recv()
