@@ -32,3 +32,8 @@ register(
     env_id='abr',
     entry_point='park.envs.abr:ABREnv',
 )
+
+register(
+    env_id='cache',
+    entry_point='park.envs.cache:CacheEnv',
+)
