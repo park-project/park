@@ -1,6 +1,16 @@
 from park.param import config
 
 
+def generate_job(np_random):
+    # pareto distribution
+    size = int((np_random.pareto(
+            config.job_size_pareto_shape) + 1) * \
+            config.job_size_pareto_scale)
+
+    t = int(np_random.exponential(config.job_interval))
+
+    return t, size
+
 def generate_jobs(num_stream_jobs, np_random):
 
     # time and job size
@@ -10,13 +20,8 @@ def generate_jobs(num_stream_jobs, np_random):
     # generate streaming sequence
     t = 0
     for _ in range(num_stream_jobs):
-        # pareto distribution
-        size = int((np_random.pareto(
-                config.job_size_pareto_shape) + 1) * \
-                config.job_size_pareto_scale)
-
-        t += int(np_random.exponential(config.job_interval))
-
+        dt, size = generate_job(np_random)
+        t += dt
         all_t.append(t)
         all_size.append(size)
 

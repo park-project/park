@@ -4,7 +4,7 @@ from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
 from park.envs.load_balance.job import Job
-from park.envs.load_balance.job_generator import generate_jobs
+from park.envs.load_balance.job_generator import generate_job, generate_jobs
 from park.envs.load_balance.server import Server
 from park.envs.load_balance.timeline import Timeline
 from park.envs.load_balance.wall_time import WallTime
@@ -68,6 +68,13 @@ class LoadBalanceEnv(core.Env):
         # reset environment (generate new jobs)
         self.reset()
 
+    def generate_job(self):
+        if self.num_stream_jobs_left > 0:
+            dt, size = generate_job(self.np_random)
+            t = self.wall_time.curr_time
+            self.timeline.push(t + dt, size)
+            self.num_stream_jobs_left -= 1
+
     def generate_jobs(self):
         all_t, all_size = generate_jobs(self.num_stream_jobs, self.np_random)
         for t, size in zip(all_t, all_size):
@@ -75,6 +82,8 @@ class LoadBalanceEnv(core.Env):
 
     def initialize(self):
         assert self.wall_time.curr_time == 0
+        # generate a job
+        self.generate_job()
         new_time, obj = self.timeline.pop()
         self.wall_time.update(new_time)
         assert isinstance(obj, int)  # a job arrival event
@@ -129,7 +138,8 @@ class LoadBalanceEnv(core.Env):
             server.reset()
         self.wall_time.reset()
         self.timeline.reset()
-        self.generate_jobs()
+        self.num_stream_jobs_left = self.num_stream_jobs
+        assert self.num_stream_jobs_left > 0
         self.incoming_job = None
         self.finished_jobs = []
         # initialize environment (jump to first job arrival event)
@@ -163,6 +173,9 @@ class LoadBalanceEnv(core.Env):
 
         # erase incoming job
         self.incoming_job = None
+
+        # generate next job
+        self.generate_job()
 
         # set to compute reward from this time point
         reward = 0
