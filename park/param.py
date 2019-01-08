@@ -80,4 +80,10 @@ parser.add_argument('--qopt_cost_model', type=str, required=False,
 parser.add_argument('--qopt_dataset', type=str, required=False,
                             default='JOB', help='')
 
+# -- Cache --
+parser.add_argument('--cache_trace', type=str, required=False, default='test', 
+                    help='trace selection')
+parser.add_argument('--cache_size', type=int, required=False, default=1024, 
+                    help='size of network cache')
+
 config, _ = parser.parse_known_args()
