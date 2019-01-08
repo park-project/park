@@ -21,7 +21,6 @@ from time import sleep
 # the default location for firefox is /usr/bin/firefox and chrome binary is /usr/bin/google-chrome
 # if they are at those locations, don't need to specify
 
-
 def timeout_handler(signum, frame):
 	raise Exception("Timeout")
 
@@ -42,13 +41,13 @@ signal.alarm(run_time + 30)
 	
 try:
 	# copy over the chrome user dir
-	default_chrome_user_dir = '../abr_browser_dir/chrome_data_dir'
+	default_chrome_user_dir = 'park/envs/abr/abr_browser_dir/chrome_data_dir'
 	chrome_user_dir = '/tmp/chrome_user_dir_id_' + process_id
 	os.system('rm -r ' + chrome_user_dir)
 	os.system('cp -r ' + default_chrome_user_dir + ' ' + chrome_user_dir)
 	
 	# start abr algorithm server
-	command = 'exec /usr/bin/python rl_server.py'
+	command = 'exec /usr/bin/python park/envs/abr/rl_server.py'
 	
 	proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 	sleep(2)
@@ -59,7 +58,7 @@ try:
 	
 	# initialize chrome driver
 	options=Options()
-	chrome_driver = '../abr_browser_dir/chromedriver'
+	chrome_driver = 'park/envs/abr/abr_browser_dir/chromedriver'
 	options.add_argument('--user-data-dir=' + chrome_user_dir)
 	options.add_argument('--ignore-certificate-errors')
 	driver=webdriver.Chrome(chrome_driver, chrome_options=options)

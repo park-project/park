@@ -10,6 +10,7 @@ import urllib
 import sys
 import json
 import zmq
+import os
 import ipc_msg_pb2
 
 import numpy as np
