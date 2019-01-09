@@ -204,7 +204,15 @@ class LoadBalanceEnv(core.Env):
 
             elif isinstance(obj, Job):  # job completion on server
                 job = obj
-                self.finished_jobs.append(job)
+                if not np.isinf(self.num_stream_jobs_left):
+                    self.finished_jobs.append(job)
+                else:
+                    # don't store infinite streaming
+                    # TODO: stream the complete job to some file
+                    if len(self.finished_jobs) > 0:
+                        self.finished_jobs[-1] +=1
+                    else:
+                        self.finished_jobs = [1]
                 if job.server.curr_job == job:
                     # server's current job is done
                     job.server.curr_job = None
