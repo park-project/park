@@ -86,4 +86,11 @@ parser.add_argument('--cache_trace', type=str, required=False, default='test',
 parser.add_argument('--cache_size', type=int, required=False, default=1024, 
                     help='size of network cache')
 
+# -- Simple Queue --
+parser.add_argument('--sq_num_servers', type=float, default=5,
+                    help='Number of server in simple queue environment (default: 5)')
+parser.add_argument('--sq_free_up_prob', type=float, default=0.5,
+                    help='Probability for a server to free up (default: 0.5)')
+
+
 config, _ = parser.parse_known_args()

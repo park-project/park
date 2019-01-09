@@ -37,3 +37,8 @@ register(
     env_id='cache',
     entry_point='park.envs.cache:CacheEnv',
 )
+
+register(
+    env_id='simple_queue',
+    entry_point='park.envs.simple_queue:SimpleQueueEnv',
+)
