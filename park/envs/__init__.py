@@ -42,3 +42,8 @@ register(
     env_id='simple_queue',
     entry_point='park.envs.simple_queue:SimpleQueueEnv',
 )
+
+register(
+    env_id='switch_scheduling',
+    entry_point='park.envs.switch_scheduling:SwitchEnv',
+)

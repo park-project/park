@@ -89,8 +89,15 @@ parser.add_argument('--cache_size', type=int, required=False, default=1024,
 # -- Simple Queue --
 parser.add_argument('--sq_num_servers', type=float, default=5,
                     help='Number of server in simple queue environment (default: 5)')
-parser.add_argument('--sq_free_up_prob', type=float, default=0.5,
-                    help='Probability for a server to free up (default: 0.5)')
+parser.add_argument('--sq_free_up_prob', type=float, default=0.1,
+                    help='Probability for a server to free up (default: 0.1)')
 
+# -- Switch Scheduling --
+parser.add_argument('--ss_num_ports', type=int, default=3,
+                     help='Number of ports (same for input and output) (default: 3)')
+parser.add_argument('--ss_state_max_queue', type=int, default=50,
+                     help='Max queue size in state before clipping (default: 50)')
+parser.add_argument('--ss_load', type=float, default=0.9,
+                     help='Load of the system (default: 0.9)')
 
 config, _ = parser.parse_known_args()
