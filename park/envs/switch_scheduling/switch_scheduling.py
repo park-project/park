@@ -35,7 +35,9 @@ class SwitchEnv(core.Env):
         action. So sum of reward indicates total packet delay.
     
     * REFERENCE *
-        @ravi, could you fill this?
+        Chapter 4
+        Communication networks: an optimization, control, and stochastic networks perspective
+        R Srikant and L Ying
     """
     def __init__(self):
         # observation and action space
