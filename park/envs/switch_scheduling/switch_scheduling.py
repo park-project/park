@@ -95,7 +95,17 @@ class SwitchEnv(core.Env):
         incoming_traffic = self.sample_from_bistochastic_matrix()
         self.queue_occupancy += incoming_traffic
 
-        # current queue occupancy in the observation space
-        assert self.observation_space.contains(self.queue_occupancy)
+        # cap the observation
+        if np.any(self.queue_occupancy > config.ss_state_max_queue):
+            obs_queue = np.minimum(
+                self.queue_occupancy, config.ss_state_max_queue)
+            logger.warn('Queue occupancy is clipped since it exceeds max queue value ' +
+                        str(config.ss_state_max_queue))
+        else:
+            obs_queue = self.queue_occupancy
 
-        return self.observation_space, reward, done, {}
+
+        # current queue occupancy in the observation space
+        assert self.observation_space.contains(obs_queue)
+
+        return obs_queue, reward, done, {}
