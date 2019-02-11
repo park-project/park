@@ -1,8 +1,10 @@
-from tf_sim import Simulator
+from park.envs.tf_placement.tf_sim import Simulator, get_op_costs
 
 class ImportantOpsSimulator(Simulator):
 
   def __init__(self, mg, op_perf, step_stats, devices):
+
+    cost_d, _ = get_op_costs(step_stats)
 
     out_d = {}
     for op in op_perf:

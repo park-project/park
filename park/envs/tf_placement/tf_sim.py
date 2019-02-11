@@ -4,6 +4,26 @@ from copy import deepcopy
 from collections import defaultdict
 import heapq
 
+def get_op_costs(step_stats):
+  d = {}
+  cost_d = {}
+
+  for dev_stat in step_stats.dev_stats:
+    # https://github.com/tensorflow/tensorflow/blob/4595f1cff635ce024e875f0f3d480172731b0b22/tensorflow/core/profiler/internal/tfprof_node.cc
+    if 'all' in dev_stat.device: #or 'CPU' in dev_stat.device:
+    # if 'cpu' not in dev_stat.device.lower():
+        for node_stat in dev_stat.node_stats:
+            n = node_stat.node_name.split(':')[0]
+            if n not in d:
+              d[n] = [node_stat.all_start_micros, node_stat.all_end_rel_micros - \
+                node_stat.op_start_rel_micros]
+            else:
+              d[n][1] += node_stat.all_end_rel_micros - node_stat.op_start_rel_micros
+
+            cost_d[n] = d[n][1]
+
+  return cost_d, d
+
 class SimQueue(object):
   def __init__(self):
     self.queue = []
@@ -51,14 +71,11 @@ class Simulator(object):
           some parameters can be missing
     """
     self.metagraph = metagraph
-    self.cost_dict = defaultdict(int, cost_dict)
-    self.output_dict = defaultdict(list, output_dict)
+    self.cost_d = self.cost_dict = defaultdict(int, cost_dict)
+    self.out_d = self.output_dict = defaultdict(list, output_dict)
     self.bus = "/bus"
     self.devices = devices
     self.params = self.default_params
-    self.disable_cpu = disable_cpu
-    for k,v in params.items():
-      self.params[k] = v
     self.node_dict = self.get_attributes()
 
     # Make a parent_map : node_name -> bool map of parents

@@ -9,3 +9,4 @@ from park.spaces.variable_discrete import VariableDiscrete
 from park.spaces.node_in_graph import NodeInGraph
 from park.spaces.edge_in_graph import EdgeInGraph
 from park.spaces.powerset import PowerSet
+from park.spaces.null import Null

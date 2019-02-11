@@ -1,13 +1,18 @@
 import numpy as np
 import math
 from itertools import permutations
+import pickle
+import networkx as nx
 
 from park import core, spaces, logger
+from park.spaces import Tuple, Box, Discrete, Graph, Null
 from park.param import config
 from park.utils import seeding
+from park.utils.directed_graph import DirectedGraph
+from park.envs.tf_placement.tf_pl_simulator import ImportantOpsSimulator
 
 pkl_repo = {
-    'inception': 'tmp_cache/inception.pkl'
+    'inception': 'park/envs/tf_placement/tmp_cache/inception.pkl'
 }
 
 class TFPlacementEnv(core.Env):
@@ -69,10 +74,12 @@ class TFPlacementEnv(core.Env):
         self.n_devs = config.pl_n_devs
         self.gpu_devs = gpu_devs
         self.devs = self.gpu_devs
-        self.grouped_G = G
+        self.G = G
 
         self.sim = ImportantOpsSimulator(mg, op_perf, step_stats, device_names)
         self.node_order = list(nx.topological_sort(G))
+        self.cost_d = self.sim.cost_d
+        self.out_d = {k: sum(v) for k, v in self.sim.out_d.items()}
 
     def reset(self):
         node_features = {}
@@ -80,15 +87,15 @@ class TFPlacementEnv(core.Env):
         cur_pl = {}
         for node in self.G.nodes():
             # checkout step function for this order as well
-            node_features[node] = [self.sim.cost_d[node],\
-                                   self.sim.out_d[node],\
+            node_features[node] = [self.cost_d[node],\
+                                   self.out_d[node],\
                                    0,\
                                    0]
             cur_pl[node] = node_features[node][2]
-            for neigh in G.neighbors(node):
+            for neigh in self.G.neighbors(node):
                 # dummy edge feature for now
                 # TODO: Allow for no edge feature possibility
-                edge_features[[node, neigh]] = -1
+                edge_features[(node, neigh)] = -1
 
         node_features[self.node_order[0]][-1] = 1
 
@@ -106,12 +113,9 @@ class TFPlacementEnv(core.Env):
         # current placement(e.g., GPU 1),
         # one-hot-bit (i.e., currently working on this node)
 
-        node_space = Tuple([\
-                Box(low=0, high=10 * (1e6), shape=(1,)),
-                Box(low=0, high=10 * (1e6), shape=(1,)),
-                Discrete(self.n_devs), 
-                Discrete(2)])
-        self.observation_space = Graph(node_space, Null())
+        node_space = Box(low=0, high=10 * (1e9), shape=(len(self.G), 4), dtype=np.float32)
+        dummy_edge_space = Box(low=-1, high=-1, shape=(self.G.number_of_edges(),), dtype=np.int8)
+        self.observation_space = Graph(node_space, dummy_edge_space)
         self.action_space = Discrete(self.n_devs)
 
     def ungroup_pl(self, pl):
@@ -127,7 +131,7 @@ class TFPlacementEnv(core.Env):
 
     # takes op-group placement and 
     # returns runtime of the placement in seconds
-    def get_rt(pl):
+    def get_rt(self, pl):
         pl = self.ungroup_pl(pl)
         rt = self.sim.simulate(pl)
         return rt / 1e6
@@ -147,21 +151,21 @@ class TFPlacementEnv(core.Env):
         reward = rt - self.prev_rt
 
         self.s.update_nodes({cur_node:\
-                            [self.sim.cost_d[node],\
-                            self.sim.out_d[node],\
+                            [self.cost_d[cur_node],\
+                            self.out_d[cur_node],\
                             int(action),\
                             0], \
 
                             next_node:\
-                                [self.sim.cost_d[next_node],\
-                                self.sim.out_d[next_node],\
+                                [self.cost_d[next_node],\
+                                self.out_d[next_node],\
                                 self.cur_pl[next_node],\
                                 1]
                         })
 
         self.cur_node_idx += 1
         self.prev_rt = rt
-        if self.cur_node_idx == len(self.node_order):
+        if 1 + self.cur_node_idx == len(self.node_order):
             done = True
         else:
             done = False
