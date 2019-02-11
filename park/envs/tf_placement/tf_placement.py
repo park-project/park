@@ -1,18 +1,30 @@
+import os
 import numpy as np
 import math
 from itertools import permutations
+import wget
 import pickle
 import networkx as nx
 
+import park
 from park import core, spaces, logger
+from park.utils.misc import create_folder_if_not_exists
 from park.spaces import Tuple, Box, Discrete, Graph, Null
 from park.param import config
 from park.utils import seeding
 from park.utils.directed_graph import DirectedGraph
 from park.envs.tf_placement.tf_pl_simulator import ImportantOpsSimulator
 
-pkl_repo = {
-    'inception': 'park/envs/tf_placement/tmp_cache/inception.pkl'
+dropbox_links = {
+    'inception': 'https://www.dropbox.com/s/1r5n4e2g3hulsge/inception.pkl?dl=1',
+    'nasnet': 'https://www.dropbox.com/s/ufm72htk1zeuccm/nasnet.pkl?dl=1',
+    'nmt': 'https://www.dropbox.com/s/9rsmmv6pm11h3i8/nmt-attention-seq-30.pkl?dl=1',
+}
+
+pkl_names = {
+    'inception': 'inception.pkl',
+    'nasnet': 'nasnet.pkl',
+    'nmt': 'nmt-attention-seq-30.pkl',
 }
 
 class TFPlacementEnv(core.Env):
@@ -53,17 +65,29 @@ class TFPlacementEnv(core.Env):
         # random seed
         self.seed(config.seed)
 
+    def possibly_download_pkl_file(self):
+        graph_dir = park.__path__[0] + '/envs/tf_placement/graphs/'
+        trace_file = graph_dir + '/' + pkl_names[config.pl_graph]
+
+        create_folder_if_not_exists(graph_dir)
+
+        if not os.path.exists(trace_file):
+            wget.download(dropbox_links[config.pl_graph],
+                out=graph_dir)
+
+        return trace_file
+
     def setup_env(self):
         device_names = ['/device:GPU:%d' % i for i in range(config.pl_n_devs)]
         gpu_devs = filter(lambda dev: 'GPU' in dev, device_names)
         gpu_devs = list(sorted(gpu_devs))
 
-        if config.pl_graph not in pkl_repo:
+        if config.pl_graph not in pkl_names:
             raise Exception('Requesting for model "%s" which doesnot exist in repo.\n\
                                      Please choose from one of the following %s' % \
                                      (config.pl_graph, ' '.join(pkl_repo.keys())))
 
-        pickled_inp_file = pkl_repo[config.pl_graph]
+        pickled_inp_file = self.possibly_download_pkl_file()
         with open(pickled_inp_file, 'rb') as f:
             j = pickle.load(f)
             mg, G, ungroup_map = j['optim_mg'], j['G'], j['ungrouped_mapping']
