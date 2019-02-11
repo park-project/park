@@ -24,6 +24,11 @@ register(
 )
 
 register(
+    env_id='congestion_control',
+    entry_point='park.envs.congestion_control:CongestionControlEnv',
+)
+
+register(
     env_id='spark',
     entry_point='park.envs.spark:SparkEnv',
 )
