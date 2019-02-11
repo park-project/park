@@ -9,6 +9,11 @@ register(
 )
 
 register(
+    env_id='abr',
+    entry_point='park.envs.abr:ABREnv',
+)
+
+register(
     env_id='abr_sim',
     entry_point='park.envs.abr_sim:ABRSimEnv',
 )
@@ -19,6 +24,11 @@ register(
 )
 
 register(
+    env_id='spark',
+    entry_point='park.envs.spark:SparkEnv',
+)
+
+register(
     env_id='spark_sim',
     entry_point='park.envs.spark_sim:SparkSimEnv',
 )
@@ -26,11 +36,6 @@ register(
 register(
     env_id='query_optimizer',
     entry_point='park.envs.query_optimizer:QueryOptEnv',
-)
-
-register(
-    env_id='abr',
-    entry_point='park.envs.abr:ABREnv',
 )
 
 register(
