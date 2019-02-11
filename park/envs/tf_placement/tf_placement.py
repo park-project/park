@@ -34,29 +34,23 @@ class TFPlacementEnv(core.Env):
     The goal is to minimize runtime of the computational graph. 
 
     * STATE *
-        A matrix of current queue occupancy. The (i, j) element in
-        the matrix indicates the queue length (number of backlogged
-        packets) in the i-th input queue connecting to j-th output
-        port.
+        Directed Graph with node feature being a list of the following:
+            (1) Cost: Op group execution time
+            (2) Mem: Op group's memory requirement when running
+            (3) Curr Placement: device id of the node based on its 
+            current placement in the episode
+            (4) is_curr_node: Is this the node that is currently being placed
+        
 
     * ACTIONS *
-        [0, 1, ..., n!-1] where n is the number of ports. The index
-        corresponding to the permutation of mapping. The permuation
-        is generated using itertools.permutations.
-        For example, n=3, ports={0, 1, 2}, itertools.permutations([
-        0, 1, 2]) = [(0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
-        (2, 0, 1), (2, 1, 0)]. Action 1 corresponds to (0, 2, 1),
-        i.e., maps packet from input queue 0 to output port 0,
-        input 1 to output 2 and input 2 to output 1.
+        [0, 1, ..., n-1] where n is the number of devices. The index
+        corresponding to the device id.
 
     * REWARD *
-        Negative number of packets remaining in the queue after the 
-        action. So sum of reward indicates total packet delay.
+        Improvement in the runtime of the placement because of the current action
     
     * REFERENCE *
-        Chapter 4
-        Communication networks: an optimization, control, and stochastic networks perspective
-        R Srikant and L Ying
+        https://arxiv.org/pdf/1706.04972.pdf
     """
     def __init__(self):
         # observation and action space
