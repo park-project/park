@@ -14,6 +14,9 @@ from park.param import config
 from park.utils import seeding
 from park.utils.directed_graph import DirectedGraph
 from park.envs.tf_placement.tf_pl_simulator import ImportantOpsSimulator
+from park.envs.tf_placement.tf_env import TFRuntime
+
+config.pl_no_simulator = True
 
 dropbox_links = {
     'inception': 'https://www.dropbox.com/s/1r5n4e2g3hulsge/inception.pkl?dl=1',
@@ -94,6 +97,11 @@ class TFPlacementEnv(core.Env):
         self.devs = self.gpu_devs
         self.G = G
 
+        if config.pl_no_simulator:
+            self.tf_runtime = TFRuntime(config.pl_graph, device_names)
+        else:
+            self.tf_runtime = None
+
         self.sim = ImportantOpsSimulator(mg, op_perf, step_stats, device_names)
         self.node_order = list(nx.topological_sort(G))
         self.cost_d = self.sim.cost_d
@@ -151,7 +159,12 @@ class TFPlacementEnv(core.Env):
     # returns runtime of the placement in seconds
     def get_rt(self, pl):
         pl = self.ungroup_pl(pl)
-        rt = self.sim.simulate(pl)
+
+        if self.tf_runtime is not None:
+            rt = self.tf_runtime.measure(pl)
+        else:
+            rt = self.sim.simulate(pl)
+
         return rt / 1e6
 
 
