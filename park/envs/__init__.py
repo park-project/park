@@ -52,3 +52,8 @@ register(
     env_id='switch_scheduling',
     entry_point='park.envs.switch_scheduling:SwitchEnv',
 )
+
+register(
+    env_id='tf_placement',
+    entry_point='park.envs.tf_placement:TFPlacementEnv'
+)
