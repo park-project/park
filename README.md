@@ -22,17 +22,16 @@ import park
 import agent_impl  # implemented by user
 
 env = park.make('congestion_control')
-agent = agent_impl.Agent(env.observation_space, env.action_space)
 
 # the run script will start the real system
 # and periodically invoke agent.get_action
-env.run(agent)
+env.run(agent_impl.Agent, agent_parameters)
 ```
 
 The `agent_impl.py` should implement
 ```
 class Agent(object):
-    def __init__(self, state_space, action_space):
+    def __init__(self, state_space, action_space, *args, **kwargs):
         self.state_space = state_space
         self.action_space = action_space
 
