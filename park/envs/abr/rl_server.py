@@ -54,13 +54,13 @@ def make_request_handler(input_dict):
     class Request_Handler(BaseHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             self.input_dict = input_dict
-            self.agent = agent
+            self.agent = input_dict['agent']
             BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
         def do_POST(self):
             content_length = int(self.headers['Content-Length'])
-            post_data = json.loads(self.rfile.read(content_length))
-            print(post_data)
+            post_data = json.loads(self.rfile.read(content_length).decode('utf-8'))
+            print('post_data', post_data)
 
             if ( 'pastThroughput' in post_data ):
                 # @Hongzi: this is just the summary of throughput/quality at the end of the load
@@ -104,12 +104,12 @@ def make_request_handler(input_dict):
                 video_chunk_size = post_data['lastChunkSize']
 
                 # compute number of video chunks left
-                video_chunk_remain = TOTAL_VIDEO_CHUNKS - self.input_dict['video_chunk_coount']
-                self.input_dict['video_chunk_coount'] += 1
+                video_chunk_remain = TOTAL_VIDEO_CHUNKS - self.input_dict['video_chunk_count']
+                self.input_dict['video_chunk_count'] += 1
 
                 next_video_chunk_sizes = []
-                for i in xrange(A_DIM):
-                    next_video_chunk_sizes.append(get_chunk_size(i, self.input_dict['video_chunk_coount']))
+                for i in range(A_DIM):
+                    next_video_chunk_sizes.append(get_chunk_size(i, self.input_dict['video_chunk_count']))
 
                 # construct the latest observation for the agent
                 obs = np.array([
@@ -128,8 +128,8 @@ def make_request_handler(input_dict):
                 # end of video or not
                 if ( post_data['lastRequest'] == TOTAL_VIDEO_CHUNKS ):
                     done = True
-                    self.input_dict['last_bit_rate'] = 0
-                    self.input_dict['video_chunk_coount'] = 0
+                    self.input_dict['last_bit_rate'] = DEFAULT_QUALITY
+                    self.input_dict['video_chunk_count'] = 0
                 else:
                     done = False
 
@@ -137,7 +137,7 @@ def make_request_handler(input_dict):
                 info = {'bitrate': VIDEO_BIT_RATE[post_data['lastquality']],
                         'stall time': rebuffer_time}
 
-                action = agent.get_action(obs, reward, done, info)
+                action = self.agent.get_action(obs, reward, done, info)
 
                 if done:
                     send_data = 'REFRESH'
@@ -150,7 +150,7 @@ def make_request_handler(input_dict):
                 self.send_header('Content-Length', len(send_data))
                 self.send_header('Access-Control-Allow-Origin', "*")
                 self.end_headers()
-                self.wfile.write(send_data)
+                self.wfile.write(send_data.encode())
 
         def do_GET(self):
             print(sys.stderr, 'GOT REQ')
@@ -186,7 +186,10 @@ def run(server_class=HTTPServer, port=8333):
     # instantiate the agent
     agent = agent_constructor(observation_space, action_space, args, kwargs)
 
-    input_dict = {'agent': agent, 'last_bit_rate': 0, 'video_chunk_coount': 0}
+    input_dict = {'agent': agent,
+                  'last_bit_rate': DEFAULT_QUALITY,
+                  'last_total_rebuf': 0,
+                  'video_chunk_count': 0}
 
     # interface to abr_rl server
     handler_class = make_request_handler(input_dict=input_dict)
