@@ -34,3 +34,7 @@ def warn(msg):
 
 def error(msg):
     logging.error(msg)
+
+
+def exception(msg):
+    logging.exception(msg)

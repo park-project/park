@@ -3,8 +3,7 @@ import concurrent.futures
 import functools
 import os
 
-from asupi.logging import get_default_logger
-
+from park import logger
 from park.envs.circuit_sim.utils import open_tmp_path, AttrDict, loads_pickle, dumps_pickle, make_pool, RobustClient
 
 __all__ = ['Context', 'RemoteContext', 'AsyncLocalContext', 'LocalContext']
@@ -109,12 +108,11 @@ class AsyncLocalContext(LocalContext):
 
 
 class RemoteContext(Context):
-    def __init__(self, host, port, logger=None, debug=False):
+    def __init__(self, host, port, debug=False):
         super().__init__(debug)
         self._host = host
         self._port = port
-        self._logger = logger or get_default_logger(self.__class__.__name__)
-        self._client = RobustClient(self._logger)
+        self._client = RobustClient(logger)
 
     def __enter__(self):
         super(RemoteContext, self).__enter__()
@@ -139,7 +137,7 @@ class RemoteContext(Context):
             result, = self._client.request(name, method, values, debug)
             return loads_pickle(result)
         except:
-            self._logger.exception("Exception occurred at remote server.")
+            logger.exception("Exception occurred at remote server.")
             return None
 
     def evaluate(self, circuit, values, debug=None):

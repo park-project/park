@@ -1,15 +1,19 @@
+import abc
+
 import numpy as np
 
+from park import logger, core
 from park.envs.circuit_sim.circuit import Circuit
+from park.param import config
+from park.utils import seeding
 
 
 class Evaluator(object):
-    def __init__(self, circuit: Circuit, logger=None):
+    def __init__(self, circuit: Circuit):
         self._circuit = circuit
         self._fixed_values = {}
         self._lbound = {}
         self._ubound = {}
-        self._logger = logger or get_default_logger(self.__class__.__name__)
 
     @property
     def circuit(self):
@@ -71,7 +75,7 @@ class Evaluator(object):
         except KeyboardInterrupt:
             raise
         except:
-            self._logger.exception("An exception occurred when evaluate single value.")
+            logger.exception("An exception occurred when evaluate single value.")
             return None
 
     def batch(self, values, debug=None):
@@ -81,5 +85,33 @@ class Evaluator(object):
         except KeyboardInterrupt:
             raise
         except:
-            self._logger.exception("An exception occurred when evaluate batch values.")
+            logger.exception("An exception occurred when evaluate batch values.")
             return None
+
+
+class CircuitSimEnv(core.Env, metaclass=abc.ABCMeta):
+    def __init__(self, evaluator: Evaluator):
+        # random seed
+        self.seed(config.seed)
+        self._evaluator = evaluator
+
+    @property
+    def action_space(self):
+        pass
+
+    @property
+    def observation_space(self):
+        pass
+
+    def seed(self, seed=None):
+        self.np_random = seeding.np_random(seed)
+
+    def step(self, action):
+        pass
+
+    def _observe(self, result):
+        pass
+
+    def reset(self):
+        self._running_param = self.np_random.rand()
+        self._running_result = self._evaluator(self._running_param)

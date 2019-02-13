@@ -59,8 +59,8 @@ class Circuit(object, metaclass=abc.ABCMeta):
                 return eval(string[:-1]) * value
         return eval(string)
 
-    def evaluator(self, **kwargs):
-        return Evaluator(self, **kwargs)
+    def evaluator(self):
+        return Evaluator(self)
 
     @property
     @abc.abstractmethod
