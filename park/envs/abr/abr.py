@@ -2,11 +2,11 @@
 # python 2.7 only because of protobuf
 
 import os
+import dill
 import json
 import wget
-import pickle
+import string
 import zipfile
-import tempfile
 import subprocess
 import numpy as np
 from sys import platform
@@ -126,23 +126,33 @@ class ABREnv(core.SysEnv):
         os.system("ps aux | grep -ie mm-delay | awk '{print $2}' | xargs kill -9")
         os.system("ps aux | grep -ie mm-link | awk '{print $2}' | xargs kill -9")
         os.system("ps aux | grep -ie abr | awk '{print $2}' | xargs kill -9")
+        os.system("sudo sysctl -w net.ipv4.ip_forward=1")
 
         trace_file = self.np_random.choice(self.all_traces)
 
         ip_data = json.loads(urlopen("http://ip.jsontest.com/").read())
         ip = str(ip_data['ip'])
 
+        curr_path_file = '/tmp/abr_curr_path_' + ''.join(
+            self.np_random.choice([i for i in string.ascii_letters + string.digits]) for _ in range(10))
+        with open(curr_path_file, 'wb') as f:
+            dill.dump(os.getcwd(), f)
+
         # pickle the agent constructor into a tmp file, so that the rl server
-        # *inside* the mahimahi shell can load and use it 
-        f = tempfile.NamedTemporaryFile()
-        pickle.dump((agent, env.observation_space, env.action_space, args, kwargs), f)
+        # *inside* the mahimahi shell can load and use it
+        agent_file_name = '/tmp/abr_agent_' + ''.join(
+            self.np_random.choice([i for i in string.ascii_letters + string.digits]) for _ in range(10))
+        with open(agent_file_name, 'wb') as f:
+            dill.dump((agent, self.observation_space, self.action_space, args, kwargs), f)
 
         # start real ABR environment
         p = subprocess.Popen('mm-delay 40' +
             ' mm-link ' + park.__path__[0] + '/envs/abr/12mbps ' +
             park.__path__[0] + '/envs/abr/cooked_traces/' + trace_file +
             ' /usr/bin/python ' + park.__path__[0] + '/envs/abr/run_video.py ' +
-            ip + ' ' + '320' + ' ' + '0' + ' ' + '1' + ' ' + f.name,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            ip + ' ' + '320' + ' ' + '0' + ' ' + '1' + ' ' +
+            curr_path_file + ' ' + agent_file_name,
+            # stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            shell=True)
 
         p.wait()

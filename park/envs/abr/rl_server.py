@@ -3,19 +3,17 @@
 
 
 #!/usr/bin/env python
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import numpy as np
-import SocketServer
-import pickle
 import base64
 import urllib
 import json
 import time
+import dill
 import sys
 import os
 
 
-AGENT_CLASS_PATH = sys.argv[1]
 S_INFO = 6  # bit_rate, buffer_size, rebuffering_time, bandwidth_measurement, chunk_til_video_end
 S_LEN = 8  # take how many frames in the past
 A_DIM = 6
@@ -175,13 +173,20 @@ def run(server_class=HTTPServer, port=8333):
 
     assert len(VIDEO_BIT_RATE) == A_DIM
 
+    CURR_PATH_FILE = sys.argv[1]
+    AGENT_CLASS_PATH = sys.argv[2]
+
+    with open(CURR_PATH_FILE, 'rb') as f:
+        curr_path = dill.load(f)
+        sys.path.append(curr_path)  # to load the agent module
+
     # load the agent constructor from pickle file
-    with opne(AGENT_CLASS_PATH, 'r') as f:
-        (agent_constructor, env.observation_space, env.action_space, args, kwargs) = \
-            pickle.load(f)
+    with open(AGENT_CLASS_PATH, 'rb') as f:
+        (agent_constructor, observation_space, action_space, args, kwargs) = \
+            dill.load(f)
 
     # instantiate the agent
-    agent = agent_constructor(env.observation_space, env.action_space, args, kwargs)
+    agent = agent_constructor(observation_space, action_space, args, kwargs)
 
     input_dict = {'agent': agent, 'last_bit_rate': 0, 'video_chunk_coount': 0}
 

@@ -28,7 +28,8 @@ ip = sys.argv[1]
 run_time = int(sys.argv[2])
 process_id = sys.argv[3]
 sleep_time = sys.argv[4]
-agent_class_path = sys.argv[5]
+curr_path_file = sys.argv[5]
+agent_class_path = sys.argv[6]
 	
 # prevent multiple process from being synchronized
 sleep(int(sleep_time))
@@ -48,7 +49,8 @@ try:
 	os.system('cp -r ' + default_chrome_user_dir + ' ' + chrome_user_dir)
 	
 	# start abr algorithm server
-	command = 'exec /usr/bin/python park/envs/abr/rl_server.py ' + agent_class_path
+	command = 'exec /usr/bin/python3 park/envs/abr/rl_server.py ' + \
+	          curr_path_file + ' ' + agent_class_path
 	
 	proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 	sleep(2)
@@ -77,7 +79,7 @@ try:
 	proc.send_signal(signal.SIGINT)
 	# proc.kill()
 	
-	print 'done'
+	print('done')
 	
 except Exception as e:
 	try: 
