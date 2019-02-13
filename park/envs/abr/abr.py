@@ -152,7 +152,7 @@ class ABREnv(core.SysEnv):
             ' /usr/bin/python ' + park.__path__[0] + '/envs/abr/run_video.py ' +
             ip + ' ' + '320' + ' ' + '0' + ' ' + '1' + ' ' +
             curr_path_file + ' ' + agent_file_name,
-            # stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             shell=True)
 
         p.wait()
