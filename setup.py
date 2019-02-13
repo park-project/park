@@ -2,5 +2,5 @@ from setuptools import setup
 
 setup(name='park',
       version='0.0.1',
-      install_requires=['numpy', 'wget', 'networkx', 'gym', 'pickle']
+      install_requires=['numpy', 'wget', 'networkx', 'gym', 'pickle', 'dill']
 )

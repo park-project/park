@@ -133,10 +133,7 @@ class ABREnv(core.SysEnv):
         ip_data = json.loads(urlopen("http://ip.jsontest.com/").read())
         ip = str(ip_data['ip'])
 
-        curr_path_file = '/tmp/abr_curr_path_' + ''.join(
-            self.np_random.choice([i for i in string.ascii_letters + string.digits]) for _ in range(10))
-        with open(curr_path_file, 'wb') as f:
-            dill.dump(os.getcwd(), f)
+        curr_path = os.getcwd()
 
         # pickle the agent constructor into a tmp file, so that the rl server
         # *inside* the mahimahi shell can load and use it
@@ -151,8 +148,8 @@ class ABREnv(core.SysEnv):
             park.__path__[0] + '/envs/abr/cooked_traces/' + trace_file +
             ' /usr/bin/python ' + park.__path__[0] + '/envs/abr/run_video.py ' +
             ip + ' ' + '320' + ' ' + '0' + ' ' + '1' + ' ' +
-            curr_path_file + ' ' + agent_file_name,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            curr_path + ' ' + agent_file_name,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
             shell=True)
 
         p.wait()

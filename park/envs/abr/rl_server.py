@@ -173,12 +173,10 @@ def run(server_class=HTTPServer, port=8333):
 
     assert len(VIDEO_BIT_RATE) == A_DIM
 
-    CURR_PATH_FILE = sys.argv[1]
+    CURR_PATH = sys.argv[1]
     AGENT_CLASS_PATH = sys.argv[2]
 
-    with open(CURR_PATH_FILE, 'rb') as f:
-        curr_path = dill.load(f)
-        sys.path.append(curr_path)  # to load the agent module
+    sys.path.append(CURR_PATH)  # to load the agent module
 
     # load the agent constructor from pickle file
     with open(AGENT_CLASS_PATH, 'rb') as f:
