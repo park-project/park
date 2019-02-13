@@ -4,19 +4,18 @@
 import os
 import json
 import wget
-import urllib
 import pickle
 import zipfile
 import tempfile
 import subprocess
 import numpy as np
 from sys import platform
+from urllib.request import urlopen
 
 import park
 from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
-from park.envs.abr import ipc_msg_pb2
 
 
 class ABREnv(core.SysEnv):
@@ -130,7 +129,7 @@ class ABREnv(core.SysEnv):
 
         trace_file = self.np_random.choice(self.all_traces)
 
-        ip_data = json.loads(urllib.urlopen("http://ip.jsontest.com/").read())
+        ip_data = json.loads(urlopen("http://ip.jsontest.com/").read())
         ip = str(ip_data['ip'])
 
         # pickle the agent constructor into a tmp file, so that the rl server
