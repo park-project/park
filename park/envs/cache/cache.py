@@ -163,7 +163,7 @@ class CacheSim(object) :
 
         self.ohr[self.req] = self.count_ohr[self.req] / (self.req + 1)
         self.bhr[self.req] = self.count_bhr[self.req] / self.size_all[self.req]
-        reward = self.bhr[self.req]
+        reward = hit * self.cost[self.req]
 
         self.req += 1
         

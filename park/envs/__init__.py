@@ -9,6 +9,11 @@ register(
 )
 
 register(
+    env_id='abr',
+    entry_point='park.envs.abr:ABREnv',
+)
+
+register(
     env_id='abr_sim',
     entry_point='park.envs.abr_sim:ABRSimEnv',
 )
@@ -16,6 +21,11 @@ register(
 register(
     env_id='aqm',
     entry_point='park.envs.aqm:AQMEnv',
+)
+
+register(
+    env_id='spark',
+    entry_point='park.envs.spark:SparkEnv',
 )
 
 register(
@@ -29,11 +39,6 @@ register(
 )
 
 register(
-    env_id='abr',
-    entry_point='park.envs.abr:ABREnv',
-)
-
-register(
     env_id='cache',
     entry_point='park.envs.cache:CacheEnv',
 )
@@ -41,4 +46,14 @@ register(
 register(
     env_id='simple_queue',
     entry_point='park.envs.simple_queue:SimpleQueueEnv',
+)
+
+register(
+    env_id='switch_scheduling',
+    entry_point='park.envs.switch_scheduling:SwitchEnv',
+)
+
+register(
+    env_id='tf_placement',
+    entry_point='park.envs.tf_placement:TFPlacementEnv'
 )

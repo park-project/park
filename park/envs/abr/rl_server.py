@@ -3,18 +3,15 @@
 
 
 #!/usr/bin/env python
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import SocketServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import numpy as np
 import base64
 import urllib
-import sys
 import json
-import zmq
-import os
-import ipc_msg_pb2
-
-import numpy as np
 import time
+import dill
+import sys
+import os
 
 
 S_INFO = 6  # bit_rate, buffer_size, rebuffering_time, bandwidth_measurement, chunk_til_video_end
@@ -57,9 +54,7 @@ def make_request_handler(input_dict):
     class Request_Handler(BaseHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             self.input_dict = input_dict
-            self.socket = input_dict['socket']
-            self.ipc_msg = input_dict['ipc_msg']
-            self.ipc_reply = input_dict['ipc_reply']
+            self.agent = agent
             BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
         def do_POST(self):
@@ -116,39 +111,39 @@ def make_request_handler(input_dict):
                 for i in xrange(A_DIM):
                     next_video_chunk_sizes.append(get_chunk_size(i, self.input_dict['video_chunk_coount']))
 
-                # pass state observation and reward to agent
-                self.ipc_msg.prev_bitrate = VIDEO_BIT_RATE[post_data['lastquality']]
-                self.ipc_msg.buffer_ahead = post_data['buffer']
-                self.ipc_msg.bandwidth = float(video_chunk_size) / float(video_chunk_fetch_time) / M_IN_K  # mega byte / sec
-                self.ipc_msg.download_time = float(video_chunk_fetch_time) / M_IN_K  # sec
-                self.ipc_msg.chunk_size = next_video_chunk_sizes
-                self.ipc_msg.remaining_chunks = np.minimum(video_chunk_remain, CHUNK_TIL_VIDEO_END_CAP)
-
-                # pass the previous reward
-                self.ipc_msg.reward = reward
+                # construct the latest observation for the agent
+                obs = np.array([
+                    VIDEO_BIT_RATE[post_data['lastquality']],
+                    post_data['buffer'],
+                    float(video_chunk_size) / float(video_chunk_fetch_time) / M_IN_K,  # mega byte / sec
+                    float(video_chunk_fetch_time) / M_IN_K,  # sec
+                    np.minimum(video_chunk_remain, CHUNK_TIL_VIDEO_END_CAP),
+                    next_video_chunk_sizes[0],
+                    next_video_chunk_sizes[1],
+                    next_video_chunk_sizes[2],
+                    next_video_chunk_sizes[3],
+                    next_video_chunk_sizes[4],
+                    next_video_chunk_sizes[5]])
 
                 # end of video or not
                 if ( post_data['lastRequest'] == TOTAL_VIDEO_CHUNKS ):
-                    self.ipc_msg.done = True
+                    done = True
                     self.input_dict['last_bit_rate'] = 0
                     self.input_dict['video_chunk_coount'] = 0
                 else:
-                    self.ipc_msg.done = False
+                    done = False
 
-                # send message to agent
-                socket.send(self.ipc_msg.SerializeToString())
+                # misc info
+                info = {'bitrate': VIDEO_BIT_RATE[post_data['lastquality']],
+                        'stall time': rebuffer_time}
 
-                # receive action from the agent if it is not done yet
-                if self.ipc_msg.done:
-                    send_data = "REFRESH"
+                action = agent.get_action(obs, reward, done, info)
+
+                if done:
+                    send_data = 'REFRESH'
 
                 else:
-                    reply = socket.recv()
-                    self.ipc_reply.ParseFromString(reply)
-                    bitrate = self.ipc_reply.action
-
-                    # send data to html side
-                    send_data = str(bitrate)
+                    send_data = str(action)
 
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/plain')
@@ -178,15 +173,20 @@ def run(server_class=HTTPServer, port=8333):
 
     assert len(VIDEO_BIT_RATE) == A_DIM
 
-    context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    ipc_msg = ipc_msg_pb2.IPCMessage()
-    ipc_reply = ipc_msg_pb2.IPCReply()
+    CURR_PATH = sys.argv[1]
+    AGENT_CLASS_PATH = sys.argv[2]
 
-    socket.bind("ipc:///tmp/abr_python_ipc")
+    sys.path.append(CURR_PATH)  # to load the agent module
 
-    input_dict = {'socket': socket, 'ipc_msg': ipc_msg, 'ipc_reply': ipc_reply,
-                  'last_bit_rate': 0, 'video_chunk_coount': 0}
+    # load the agent constructor from pickle file
+    with open(AGENT_CLASS_PATH, 'rb') as f:
+        (agent_constructor, observation_space, action_space, args, kwargs) = \
+            dill.load(f)
+
+    # instantiate the agent
+    agent = agent_constructor(observation_space, action_space, args, kwargs)
+
+    input_dict = {'agent': agent, 'last_bit_rate': 0, 'video_chunk_coount': 0}
 
     # interface to abr_rl server
     handler_class = make_request_handler(input_dict=input_dict)

@@ -28,6 +28,8 @@ ip = sys.argv[1]
 run_time = int(sys.argv[2])
 process_id = sys.argv[3]
 sleep_time = sys.argv[4]
+curr_path = sys.argv[5]
+agent_class_path = sys.argv[6]
 	
 # prevent multiple process from being synchronized
 sleep(int(sleep_time))
@@ -47,7 +49,8 @@ try:
 	os.system('cp -r ' + default_chrome_user_dir + ' ' + chrome_user_dir)
 	
 	# start abr algorithm server
-	command = 'exec /usr/bin/python park/envs/abr/rl_server.py'
+	command = 'exec /usr/bin/python3 park/envs/abr/rl_server.py ' + \
+	          curr_path + ' ' + agent_class_path
 	
 	proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 	sleep(2)
@@ -55,14 +58,19 @@ try:
 	# to not display the page in browser
 	display = Display(visible=0, size=(800,600))
 	display.start()
+
+	# need the park directory
+	sys.path.append(curr_path)  # to load the agent module
 	
 	# initialize chrome driver
 	options=Options()
-	chrome_driver = 'park/envs/abr/abr_browser_dir/chromedriver'
+	import park
+	chrome_driver = park.__path__[0] + '/envs/abr/abr_browser_dir/chromedriver'
 	options.add_argument('--user-data-dir=' + chrome_user_dir)
 	options.add_argument('--ignore-certificate-errors')
+	options.add_argument('--autoplay-policy=no-user-gesture-required')
 	driver=webdriver.Chrome(chrome_driver, chrome_options=options)
-	
+
 	# run chrome
 	driver.set_page_load_timeout(10)
 	driver.get(url)
@@ -76,7 +84,7 @@ try:
 	proc.send_signal(signal.SIGINT)
 	# proc.kill()
 	
-	print 'done'
+	print('done')
 	
 except Exception as e:
 	try: 
