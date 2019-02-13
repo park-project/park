@@ -130,7 +130,7 @@ class ABREnv(core.SysEnv):
 
         trace_file = self.np_random.choice(self.all_traces)
 
-        ip_data = json.loads(urlopen("http://ip.jsontest.com/").read())
+        ip_data = json.loads(urlopen("http://ip.jsontest.com/").read().decode('utf-8'))
         ip = str(ip_data['ip'])
 
         curr_path = os.getcwd()
