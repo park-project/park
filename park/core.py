@@ -2,7 +2,6 @@ from park import logger
 
 
 # Env-related abstractions
-
 class Env(object):
     """
     The main park class. The interface follows OpenAI gym
@@ -66,8 +65,50 @@ class Env(object):
         logger.warn('Could not seed environment ' + self.metadata['env.name'])
         return
 
-# Space-related abstractions
 
+# Real system environment abstractions
+class SysEnv(object):
+    """
+    For many real world systems, the agent only passively returns
+    action when the system requests. In other words, it is more
+    natural for the system to run on it own, as opposed to using
+    the step function to "tick the time" in most simualted cases
+    as above.
+
+    The main API methods that users of this class need to know is:
+
+        run(agent_constructor, agent_parameters)
+
+    The user implements the agent in this format
+
+        class Agent(object):
+        def __init__(self, state_space, action_space, *args, **kwargs):
+            self.state_space = state_space
+            self.action_space = action_space
+
+        def get_action(self, obs, prev_reward, prev_done, prev_info):
+            act = self.action_space.sample()
+            # implement real action logic here
+            return act
+    """
+
+    # Set this in some subclasses
+    metadata = {'env.name': 'abstract_env'}
+    reward_range = (-float('inf'), float('inf'))
+
+    # Set these in ALL subclasses
+    action_space = None
+    observation_space = None
+
+    def run(self, agent, *args, **kwargs):
+        """
+        Take in agent constructor, run the real system that consults the
+        agent for the action at certain events
+        """
+        raise NotImplementedError
+
+
+# Space-related abstractions
 class Space(object):
     """
     Defines the observation and action spaces, so you can write generic
