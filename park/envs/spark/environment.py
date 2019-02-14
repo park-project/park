@@ -1,6 +1,6 @@
-from park.envs.spark_sim.utils import *
 from park.envs.spark_sim.executor import *
 from park.envs.spark_sim.job_dag import *
+from park.param import config
 from park.utils.ordered_set import OrderedSet
 
 
@@ -16,7 +16,7 @@ class Environment(object):
 
         # executors
         self.executors = {}
-        for exec_id in xrange(args.exec_cap):
+        for exec_id in range(config.exec_cap):
             self.executors[exec_id] = Executor(exec_id)
 
         # dynamically bind {app_id -> job_dag}
@@ -58,7 +58,7 @@ class Environment(object):
         return job_dag
 
     def bind_exec_id(self, app_id, exec_id, track_id):
-        assert 0 <= track_id < args.exec_cap
+        assert 0 <= track_id < config.exec_cap
         self.exec_id_track_id_map[app_id][exec_id] = track_id
 
     def complete_stage(self, app_id, stage_id):
