@@ -197,7 +197,7 @@ class SchedulingServer(mp.Process):
                 for app_id in self.dag_db.apps_map:
                     if app_id in self.exec_tracker.executor_flow:
                         job_dag = self.dag_db.apps_map[app_id]
-                        exec_map[job_dag] = self.exec_tracker[app_id]
+                        exec_map[job_dag] = self.exec_tracker.executor_flow[app_id]
 
                 source_job = self.dag_db.apps_map[ipc_msg.app_id]
 
