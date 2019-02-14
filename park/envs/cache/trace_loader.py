@@ -20,7 +20,7 @@ def load_traces(trace, cache_size):
                 park.__path__[0] + '/envs/cache/traces/test_trace.zip', 'r') as zip_f:
                 zip_f.extractall(park.__path__[0] + '/envs/cache/traces/test_trace/')            
 
-        rnd = random.randint(0, 1000)
+        rnd = random.randint(1, 1001)
         print('Load #%i trace for cache size of %i' % (rnd, cache_size))
 
         # load time, request id, request size
