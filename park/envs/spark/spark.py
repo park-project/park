@@ -1,8 +1,10 @@
 import os
 import sys
 import zmq
+import time
 import numpy as np
 import multiprocessing as mp
+from datetime import datetime
 from collections import OrderedDict
 
 import park
@@ -85,6 +87,8 @@ class SparkEnv(core.SysEnv):
         submit_script = 'python3 ' + park_path + '/envs/spark/submit_tpch.py'
         os.system(submit_script)
 
+        server_process.join()
+
     def seed(self, seed):
         self.np_random = seeding.np_random(seed)
 
@@ -118,64 +122,72 @@ class SchedulingServer(mp.Process):
         self.agent = agent_class(
             self.observation_space, self.action_space, args, kwargs)
 
+    def run(self):
+
         # set up ipc communication
         context = zmq.Context()
-        self.socket = context.socket(zmq.REP)
-        self.ipc_msg = IPCMessage()
-        self.ipc_reply = IPCReply()
+        socket = context.socket(zmq.REP)
+        ipc_msg = IPCMessage()
+        ipc_reply = IPCReply()
 
-    def run(self):
+        os.system('rm /tmp/spark_scheduling_java_python_ipc')
+        socket.bind("ipc:///tmp/spark_scheduling_java_python_ipc")
+
+        # for reward computation
+        num_active_jobs = 0
+        prev_time = time.time()
+
         while not self.exit.is_set():
-            msg = self.socket.recv()
-            self.ipc_msg.ParseFromString(msg)
+            msg = socket.recv()
+            ipc_msg.ParseFromString(msg)
 
-            if self.ipc_msg.msg_type == 'register':
-                self.dag_db.add_new_app(self.ipc_msg.app_name, self.ipc_msg.app_id)
-                job_dag = self.env.add_job_dag(self.ipc_msg.app_id)
+            if ipc_msg.msg_type == 'register':
+                self.dag_db.add_new_app(ipc_msg.app_name, ipc_msg.app_id)
+                job_dag = self.env.add_job_dag(ipc_msg.app_id)
                 add_job_in_graph(self.graph, job_dag)
-                self.ipc_reply.msg = \
-                    "external scheduler register app " + str(self.ipc_msg.app_name)
+                ipc_reply.msg = \
+                    "external scheduler register app " + str(ipc_msg.app_name)
 
-            elif self.ipc_msg.msg_type == 'bind':
-                self.env.bind_exec_id(self.ipc_msg.app_id, self.ipc_msg.exec_id, self.ipc_msg.track_id)
-                self.ipc_reply.msg = \
+            elif ipc_msg.msg_type == 'bind':
+                self.env.bind_exec_id(ipc_msg.app_id, ipc_msg.exec_id, ipc_msg.track_id)
+                ipc_reply.msg = \
                     "external scheduler bind app_id " + \
-                    str(self.ipc_msg.app_id) + " exec_id " + \
-                    str(self.ipc_msg.exec_id) + " on track_id " + \
-                    str(self.ipc_msg.track_id)
+                    str(ipc_msg.app_id) + " exec_id " + \
+                    str(ipc_msg.exec_id) + " on track_id " + \
+                    str(ipc_msg.track_id)
 
-            elif self.ipc_msg.msg_type == 'inform':
+            elif ipc_msg.msg_type == 'inform':
                 self.env.complete_tasks(
-                    self.ipc_msg.app_id, self.ipc_msg.stage_id, self.ipc_msg.num_tasks_left)
-                self.ipc_reply.msg = \
+                    ipc_msg.app_id, ipc_msg.stage_id, ipc_msg.num_tasks_left)
+                ipc_reply.msg = \
                     "external scheduler updated app_id " + \
-                    str(self.ipc_msg.app_id) + \
+                    str(ipc_msg.app_id) + \
                     " stage_id " + \
-                    str(self.ipc_msg.stage_id) + \
-                    " with " + str(self.ipc_msg.num_tasks_left) + " tasks left"
+                    str(ipc_msg.stage_id) + \
+                    " with " + str(ipc_msg.num_tasks_left) + " tasks left"
 
-            elif self.ipc_msg.msg_type == 'update':
+            elif ipc_msg.msg_type == 'update':
                 frontier_nodes_changed = \
-                    self.env.complete_stage(self.ipc_msg.app_id, self.ipc_msg.stage_id)
+                    self.env.complete_stage(ipc_msg.app_id, ipc_msg.stage_id)
 
-                self.ipc_reply.msg = \
+                ipc_reply.msg = \
                     "external scheduler updated app_id " + \
-                    str(self.ipc_msg.app_id) + \
+                    str(ipc_msg.app_id) + \
                     " stage_id " + \
-                    str(self.ipc_msg.stage_id)
+                    str(ipc_msg.stage_id)
 
-            elif self.ipc_msg.msg_type == 'tracking':
+            elif ipc_msg.msg_type == 'tracking':
                 # master asks which app it should assign the executor to
-                self.ipc_reply.app_id, self.ipc_reply.num_executors_to_take = \
-                    self.exec_tracker.pop_executor_flow(self.ipc_msg.num_available_executors)
-                self.ipc_reply.msg = \
+                ipc_reply.app_id, ipc_reply.num_executors_to_take = \
+                    self.exec_tracker.pop_executor_flow(ipc_msg.num_available_executors)
+                ipc_reply.msg = \
                     "external scheduler moves " + \
-                    str(self.ipc_reply.num_executors_to_take) + \
-                    " executor to app " + self.ipc_reply.app_id
+                    str(ipc_reply.num_executors_to_take) + \
+                    " executor to app " + ipc_reply.app_id
 
-            elif self.ipc_msg.msg_type == 'consult':
+            elif ipc_msg.msg_type == 'consult':
 
-                # convert self.ipc_msg.app_id and self.ipc_msg.stage_id to corresponding
+                # convert ipc_msg.app_id and ipc_msg.stage_id to corresponding
                 # executors in virtual environment and then inovke the
                 # scheduling agent
 
@@ -183,11 +195,11 @@ class SchedulingServer(mp.Process):
                 # sort out the exec_map (where the executors are)
                 exec_map = {job_dag: 0 for job_dag in self.env.job_dags}
                 for app_id in self.dag_db.apps_map:
-                    if app_id in self.exec_tracker:
+                    if app_id in self.exec_tracker.executor_flow:
                         job_dag = self.dag_db.apps_map[app_id]
                         exec_map[job_dag] = self.exec_tracker[app_id]
 
-                source_job = self.dag_db.apps_map[self.ipc_msg.app_id]
+                source_job = self.dag_db.apps_map[ipc_msg.app_id]
 
                 frontier_nodes = OrderedSet()
                 for job_dag in self.env.job_dags:
@@ -214,55 +226,64 @@ class SchedulingServer(mp.Process):
                         self.graph.update_nodes({node: feature})
 
                 # update mask in the action space
-                self.action_space[0].update_valid_set(frontier_nodes)
+                self.action_space.update_valid_set(frontier_nodes)
 
-                # 2. get the action from the agent
-                node = self.agent.get_action(obs, prev_reward, prev_done, prev_info)
+                # 2. gather feedback for the previous action
+                curr_time = time.time()
+                elapsed_time = curr_time - prev_time
+                prev_reward = num_active_jobs * elapsed_time
+                prev_done = False  # spark can be long running
+                prev_info = {'elapsed_time': elapsed_time}
+                num_active_jobs = len(self.env.job_dags)
+                prev_time = curr_time
 
-                # 3. translate the action to ipc reply
+                # 3. get the action from the agent
+                node = self.agent.get_action(self.graph, prev_reward, prev_done, prev_info)
+
+                # 4. translate the action to ipc reply
                 if node is None:
                     # no-action was made
-                    self.ipc_reply.app_id = 'void'
-                    self.ipc_reply.stage_id = -1
+                    ipc_reply.app_id = 'void'
+                    ipc_reply.stage_id = -1
                 else:
-                    self.ipc_reply.app_id, self.ipc_reply.stage_id = self.spark_inverse_node_map[node]
+                    ipc_reply.app_id, ipc_reply.stage_id = self.env.spark_inverse_node_map[node]
                     if node.idx not in node.job_dag.frontier_nodes:
                         # move (or stay) the executor to the job only
-                        self.ipc_reply.stage_id = -1
+                        ipc_reply.stage_id = -1
 
-                if self.ipc_msg.app_id != 'void' and \
-                   self.ipc_reply.app_id != 'void' and \
-                   self.ipc_msg.app_id != self.ipc_reply.app_id:
+                if ipc_msg.app_id != 'void' and \
+                   ipc_reply.app_id != 'void' and \
+                   ipc_msg.app_id != ipc_reply.app_id:
                     # executor needs to move to another job, keep track of it
-                    self.exec_tracker.add_executor_flow(self.ipc_reply.app_id, 1)
+                    self.exec_tracker.add_executor_flow(ipc_reply.app_id, 1)
 
-                self.ipc_reply.msg = \
-                    "external scheduler return app_id " + str(self.ipc_reply.app_id) + \
-                    " stage_id " + str(self.ipc_reply.stage_id) + \
-                    " for exec_id " + str(self.ipc_msg.exec_id)
+                ipc_reply.msg = \
+                    "external scheduler return app_id " + str(ipc_reply.app_id) + \
+                    " stage_id " + str(ipc_reply.stage_id) + \
+                    " for exec_id " + str(ipc_msg.exec_id)
 
-            elif self.ipc_msg.msg_type == 'deregister':
-                job_dag = self.env.remove_job_dag(self.ipc_msg.app_id)
+            elif ipc_msg.msg_type == 'deregister':
+                job_dag = self.env.remove_job_dag(ipc_msg.app_id)
                 remove_job_from_graph(self.graph, job_dag)
-                self.dag_db.remove_app(self.ipc_msg.app_id)
-                self.exec_tracker.remove_app(self.ipc_msg.app_id)
-                self.ipc_reply.msg = \
-                    "external scheduler deregister app " + self.ipc_msg.app_id
+                self.dag_db.remove_app(ipc_msg.app_id)
+                self.exec_tracker.remove_app(ipc_msg.app_id)
+                ipc_reply.msg = \
+                    "external scheduler deregister app " + ipc_msg.app_id
 
             print("time:", datetime.now())
-            print("msg_type:", self.ipc_msg.msg_type)
-            print("app_name:", self.ipc_msg.app_name)
-            print("app_id:", self.ipc_msg.app_id)
-            print("stage_id:", self.ipc_msg.stage_id)
-            print("executor_id:", self.ipc_msg.exec_id)
-            print("track_id:", self.ipc_msg.track_id)
-            print("num_available_executors:", self.ipc_msg.num_available_executors)
-            print("num_tasks_left", self.ipc_msg.num_tasks_left)
-            print("reply_msg:", self.ipc_reply.msg)
+            print("msg_type:", ipc_msg.msg_type)
+            print("app_name:", ipc_msg.app_name)
+            print("app_id:", ipc_msg.app_id)
+            print("stage_id:", ipc_msg.stage_id)
+            print("executor_id:", ipc_msg.exec_id)
+            print("track_id:", ipc_msg.track_id)
+            print("num_available_executors:", ipc_msg.num_available_executors)
+            print("num_tasks_left", ipc_msg.num_tasks_left)
+            print("reply_msg:", ipc_reply.msg)
             print("")
             sys.stdout.flush()
 
-            self.socket.send(self.ipc_reply.SerializeToString())
+            socket.send(ipc_reply.SerializeToString())
 
     def shutdown(self):
         self.exit.set()
