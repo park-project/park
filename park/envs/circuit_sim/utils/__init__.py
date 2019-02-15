@@ -1,9 +1,9 @@
-from .attrdict import *
+from .container import *
 from .io import *
 from .concurrency import *
 from .comm import *
 
-del attrdict
+del container
 del io
 del concurrency
 del comm
