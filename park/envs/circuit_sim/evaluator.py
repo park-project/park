@@ -128,12 +128,15 @@ class CircuitSimIncrementalEnv(CircuitSimEnv, metaclass=abc.ABCMeta):
         self._running_score = self._benchmark(features)
 
         reward = self._running_score - last_score
+        terminate = self._running_count == self.total_steps
+        obs = flatten_by_meta(features, self._evaluator.result_meta)
 
-        return flatten_by_meta(features, self._evaluator.result_meta), reward, features
+        return obs, reward, terminate, features
 
     def reset(self):
         self._running_count = 0
         self._running_param = self.np_random.rand()
         features = self._evaluator(self._running_param)
         self._running_score = self._benchmark(features)
+
         return flatten_by_meta(features, self._evaluator.result_meta)
