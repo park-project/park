@@ -57,3 +57,8 @@ register(
     env_id='tf_placement',
     entry_point='park.envs.tf_placement:TFPlacementEnv'
 )
+
+register(
+    env_id='one_stage_amplifier_incremental',
+    entry_point='park.envs.circuit_sim.one_stage.voltage:make_env'
+)
