@@ -1,9 +1,12 @@
+import os
+import wget
 import copy
+import park
+import zipfile
 import numpy as np
-from sim.param import *
-from sim.spark_env.wall_time import WallTime
-from sim.spark_env.job_dag import merge_job_dags
-from sim.spark_env.job_generator import JobLoader
+from park.envs.spark_sim.wall_time import WallTime
+from park.envs.spark_sim.job_dag import merge_job_dags
+from park.envs.spark_sim.job_generator import load_job
 
 
 class DAGsDatabase(object):
@@ -25,30 +28,47 @@ class DAGsDatabase(object):
         # dynamically bind app_id -> app_name (query)
         self.queries_map = {}
 
+        # number of tpch queries
+        tpch_num = 22
+        # tpch sizes
+        tpch_size = ['2g','5g','10g','20g','50g','80g','100g']
+        # tpch trace folder
+        tpch_folder = park.__path__[0] + '/envs/spark/tpch/'
+        # dummy np_random
+        np_random = np.random.RandomState()
+
+        # download tpch folder if not existed
+        if not os.path.exists(park.__path__[0] + '/envs/spark/tpch/'):
+            wget.download(
+                'https://www.dropbox.com/s/w4xha9rf92851vy/tpch.zip?dl=1',
+                out=park.__path__[0] + '/envs/spark/')
+            with zipfile.ZipFile(
+                 park.__path__[0] + '/envs/spark/tpch.zip', 'r') as zip_f:
+                zip_f.extractall(park.__path__[0] + '/envs/spark/')
+
         # initialize dags_store
-        for query_size in args.tpch_size:
-            for query_idx in xrange(1, args.tpch_num + 1):
+        for query_size in tpch_size:
+            for query_idx in range(1, tpch_num + 1):
 
-                query = args.tpch_prefix + query_size + '-' + str(query_idx)
+                job_dag = load_job(
+                    query_size, query_idx, self.wall_time, np_random)
 
-                job_dag = JobLoader(args.tpch_folder, query, self.wall_time)
-
-                self.apps_store[args.tpch_prefix + query_size + \
+                self.apps_store['tpch-' + query_size + \
                     '-' + str(query_idx)] = job_dag
 
                 # load stage_id -> node_idx map
                 stage_id_to_node_idx_map = \
-                    np.load(args.tpch_folder + query_size + '/' + \
+                    np.load(tpch_folder + query_size + '/' + \
                         'stage_id_to_node_idx_map_' + \
                         str(query_idx) + '.npy').item()
 
                 # build up the new map based on merged job_dag
                 node_idx_to_stage_id_map = \
-                    {v: k for k, v in stage_id_to_node_idx_map.iteritems()}
+                    {stage_id_to_node_idx_map[k]: k for k in stage_id_to_node_idx_map}
 
                 # store the {node.idx -> stage_id} map
                 self.stage_store[
-                    args.tpch_prefix + query_size + '-' + str(query_idx)] = \
+                    'tpch-' + query_size + '-' + str(query_idx)] = \
                     node_idx_to_stage_id_map
 
     def add_new_app(self, app_name, app_id):

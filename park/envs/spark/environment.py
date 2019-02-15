@@ -1,6 +1,7 @@
-from park.envs.spark_sim.utils import *
 from park.envs.spark_sim.executor import *
 from park.envs.spark_sim.job_dag import *
+from park.param import config
+from park.utils.ordered_set import OrderedSet
 
 
 class Environment(object):
@@ -8,14 +9,14 @@ class Environment(object):
 
         self.dag_db = dag_db
 
-        self.job_dags = []
+        self.job_dags = OrderedSet()
         self.action_map = {}  # action index -> node
         self.available_executors = {}
         self.last_trigger = None
 
         # executors
         self.executors = {}
-        for exec_id in xrange(args.exec_cap):
+        for exec_id in range(config.exec_cap):
             self.executors[exec_id] = Executor(exec_id)
 
         # dynamically bind {app_id -> job_dag}
@@ -34,7 +35,7 @@ class Environment(object):
         job_dag = self.dag_db.apps_map[app_id]
         job_dag.arrived = True
 
-        self.job_dags.append(job_dag)
+        self.job_dags.add(job_dag)
 
         # update map for job_dag
         self.spark_dag_map[app_id] = job_dag
@@ -54,8 +55,10 @@ class Environment(object):
         self.action_map.clear()
         self.action_map.update(self.pre_compute_action_map())
 
+        return job_dag
+
     def bind_exec_id(self, app_id, exec_id, track_id):
-        assert 0 <= track_id < args.exec_cap
+        assert 0 <= track_id < config.exec_cap
         self.exec_id_track_id_map[app_id][exec_id] = track_id
 
     def complete_stage(self, app_id, stage_id):
@@ -121,3 +124,5 @@ class Environment(object):
         # update map for actions
         self.action_map.clear()
         self.action_map.update(self.pre_compute_action_map())
+
+        return job_dag
