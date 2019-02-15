@@ -36,5 +36,5 @@ def error(msg):
     logging.error(msg)
 
 
-def exception(msg):
-    logging.exception(msg)
+def exception(msg, *args, **kwargs):
+    logging.exception(msg, *args, **kwargs)

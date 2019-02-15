@@ -112,7 +112,7 @@ class RemoteContext(Context):
         super().__init__(debug)
         self._host = host
         self._port = port
-        self._client = RobustClient(logger)
+        self._client = RobustClient()
 
     def __enter__(self):
         super(RemoteContext, self).__enter__()

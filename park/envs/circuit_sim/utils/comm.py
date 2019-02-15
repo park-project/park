@@ -7,6 +7,7 @@ import functools
 import zmq
 import zmq.asyncio
 
+from park import logger
 from park.envs.circuit_sim.utils import graceful_execute, make_pool
 
 __all__ = ['_AbstractNode', 'socket_bind', 'socket_unbind', 'socket_connect', 'socket_disconnect',
@@ -94,15 +95,10 @@ def socket_disconnect(socket: zmq.Socket, protocol, interface, port=None):
 
 
 class RobustClient(_AbstractNode):
-    def __init__(self, logger=None):
+    def __init__(self):
         super().__init__()
         self._socket = None
-        self._logger = logger or get_default_logger(self.__class__.__name__)
         self._counter = None
-
-    @property
-    def logger(self):
-        return self._logger
 
     def initialize(self, context: zmq.Context = None):
         super(RobustClient, self).initialize(context)
@@ -140,39 +136,34 @@ class RobustClient(_AbstractNode):
                 except zmq.ZMQError:
                     has_events = bool(self._socket.poll(timeout * 1000))
                     if not has_events:
-                        self._logger.info('Resend heartbeat signal because the server seems dead.')
+                        logger.info('Resend heartbeat signal because the server seems dead.')
                         self._socket.send_multipart([str(timeout).encode('utf-8'), b'h'], copy=False)
                         continue
                     flag, *payload = self._socket.recv_multipart(zmq.DONTWAIT, copy=True)
                 if flag == b'h':
-                    self._logger.debug(f'Received server response for heartbeat.')
+                    logger.debug(f'Received server response for heartbeat.')
                 elif flag == b'e':
                     message, = payload
                     message = message.decode('utf-8')
                     raise RuntimeError(f'Error occurs when execute request on server: "{message}"')
                 elif flag == b'r':
-                    self._logger.debug(f'Resend the message required by the server')
+                    logger.debug(f'Resend the message required by the server')
                     break
                 elif flag not in tasks:
-                    self._logger.warning('Receive outdated index result from the server')
+                    logger.warning('Receive outdated index result from the server')
                 else:
                     tasks.pop(flag)
                     yield payload
 
 
 class RobustServer(_AbstractNode):
-    def __init__(self, mode='thread', workers=None, logger=None):
+    def __init__(self, mode='thread', workers=None):
         super().__init__()
         self._socket = None
-        self._logger = logger or get_default_logger(self.__class__.__name__)
         self._workers = workers
         self._mode = mode
         self._pool = None
         self._ongoing_tasks = None
-
-    @property
-    def logger(self):
-        return self._logger
 
     def bind(self, protocol, interface=None, port=None):
         return socket_bind(self._socket, protocol, interface, port)
@@ -201,7 +192,7 @@ class RobustServer(_AbstractNode):
         if not self._ongoing_tasks[identity]:
             self._ongoing_tasks.pop(identity)
         if exception:
-            self._logger.exception(f'An exception occurred when handling task.', exc_info=exception)
+            logger.exception(f'An exception occurred when handling task.', exc_info=exception)
             coroutine = self._socket.send_multipart([identity, b'e', str(exception).encode('utf-8')], copy=False)
         else:
             result = future.result()
@@ -240,7 +231,7 @@ class RobustServer(_AbstractNode):
             return
 
         if index in self._ongoing_tasks[identity]:
-            self._logger.info('Duplicated index found from the client')
+            logger.info('Duplicated index found from the client')
             return
         self._ongoing_tasks[identity].add(index)
 
@@ -262,7 +253,7 @@ class RobustServer(_AbstractNode):
             except KeyboardInterrupt:
                 raise
             except Exception as exception:
-                self._logger.exception(f'An exception occurred when handling message.')
+                logger.exception(f'An exception occurred when handling message.')
                 await self._socket.send_multipart([identity, b'e', str(exception).encode('utf-8')],
                                                   flags=zmq.DONTWAIT, copy=False)
 
