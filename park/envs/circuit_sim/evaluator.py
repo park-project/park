@@ -1,10 +1,14 @@
 import abc
+import functools
 
 import numpy as np
 
 from park import logger, core
+from park.envs.circuit_sim.benchmark import Benchmark
 from park.envs.circuit_sim.circuit import Circuit
+from park.envs.circuit_sim.utils import flatten_by_meta
 from park.param import config
+from park.spaces import Box
 from park.utils import seeding
 
 
@@ -90,28 +94,46 @@ class Evaluator(object):
 
 
 class CircuitSimEnv(core.Env, metaclass=abc.ABCMeta):
-    def __init__(self, evaluator: Evaluator):
-        # random seed
+    def __init__(self, evaluator: Evaluator, specs, benchmark: Benchmark):
         self.seed(config.seed)
         self._evaluator = evaluator
+        self._benchmark = functools.partial(benchmark, specs=specs)
 
     @property
-    def action_space(self):
-        pass
-
-    @property
-    def observation_space(self):
+    @abc.abstractmethod
+    def total_steps(self):
         pass
 
     def seed(self, seed=None):
         self.np_random = seeding.np_random(seed)
 
-    def step(self, action):
-        pass
 
-    def _observe(self, result):
-        pass
+class CircuitSimIncrementalEnv(CircuitSimEnv, metaclass=abc.ABCMeta):
+    def __init__(self, evaluator: Evaluator, specs, benchmark: Benchmark, total_steps=3):
+        super().__init__(evaluator, specs, benchmark)
+        self._total_steps = total_steps
+        self.observation_space = flatten_by_meta(self._evaluator.result_meta, self._evaluator.result_meta)
+        self.action_space = Box(low=self._evaluator.lower_bound, high=self._evaluator.upper_bound)
+
+    @property
+    def total_steps(self):
+        return self._total_steps
+
+    def step(self, action):
+        self._running_count += 1
+        last_score = self._running_score
+
+        self._running_param += action
+        features = self._evaluator(self._running_param)
+        self._running_score = self._benchmark(features)
+
+        reward = self._running_score - last_score
+
+        return flatten_by_meta(features, self._evaluator.result_meta), reward, features
 
     def reset(self):
+        self._running_count = 0
         self._running_param = self.np_random.rand()
-        self._running_result = self._evaluator(self._running_param)
+        features = self._evaluator(self._running_param)
+        self._running_score = self._benchmark(features)
+        return flatten_by_meta(features, self._evaluator.result_meta)
