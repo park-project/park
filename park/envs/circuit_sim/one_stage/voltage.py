@@ -122,7 +122,7 @@ class OneStageVoltageAmplifier(Circuit):
                 gain_bandwidth=Box(shape=()),
                 bandwidth=Box(shape=()),
                 area=Box(shape=()),
-                saturated=OptSpace(2, 'bool')
+                saturated=Box(shape=(), low=0, high=1)
             ),
             transistor_states=AttrDict(
                 M0=Box(shape=(22,)),
