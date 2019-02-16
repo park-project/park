@@ -5,3 +5,4 @@ traces/
 *.pyc
 *.tr
 *.zip
+._*

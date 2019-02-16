@@ -33,5 +33,4 @@ class TFRuntime(object):
       rt = np.average(rts[-5:])
 
 
-    import pdb; pdb.set_trace()
     return float(rt) * 1e6 # microseconds

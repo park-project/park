@@ -105,8 +105,5 @@ parser.add_argument('--pl_graph', type=str, default='inception',
                     help='The tensorflow graph to place')
 parser.add_argument('--pl_n_devs', type=int, default=2,
                     help='Number of devices to split the graph across')
-parser.add_argument('--pl_no_simulator', action='store_true',
-                    dest='pl_no_simulator', 
-                    help='Do not use simulator to measure runtime if this is specified. Use the real tensorflow environment instead')
 
 config, _ = parser.parse_known_args()
