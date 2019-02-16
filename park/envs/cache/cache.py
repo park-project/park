@@ -116,10 +116,7 @@ class CacheSim(object) :
                             
                     # add into cache
                     self.cache[obj_id] = [obj_size, req] 
-                    if self.policy == 'size':
-                        heapq.heappush(self.cache_pq, (obj_size, obj_id))
-                    elif self.policy == 'time':
-                        heapq.heappush(self.cache_pq, (req, obj_id))
+                    heapq.heappush(self.cache_pq, (obj_size, obj_id))
                     cache_size_online_remain -= obj_size
                     self.size_all += obj_size
                     # cost value is based on size, can be changed
