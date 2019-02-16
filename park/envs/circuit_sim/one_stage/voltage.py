@@ -3,17 +3,32 @@ import os
 import math
 import re
 import shutil
+import wget
 
+import park
 from park.envs.circuit_sim.circuit import Circuit
 from park.envs.circuit_sim.context import LocalContext
 from park.envs.circuit_sim.evaluator import CircuitSimIncrementalEnv
 from park.envs.circuit_sim.utils import AttrDict
 from park.spaces import Box
+from park.utils.misc import create_folder_if_not_exists
 
-__all__ = ['OneStageVoltageAmplifier', 'make_env']
+__all__ = ['OneStageVoltageAmplifier', 'make_incremental_env']
 
 
 class OneStageVoltageAmplifier(Circuit):
+    def __init__(self, context=None):
+        super().__init__(context)
+
+        library_path = os.path.join(park.__path__[0], 'envs', 'circuit_sim', 'library')
+        create_folder_if_not_exists(library_path)
+        self._template_path = os.path.join(library_path, 'voltage', 'one_stage.circuit')
+        self._libspice_path = os.path.join(library_path, 'sm046005-1j.hspice')
+        if not os.path.exists(self._template_path):
+            wget.download('<template path placeholder>', self._template_path)  # TODO: place real url here
+        if not os.path.exists(self._libspice_path):
+            wget.download('<libspice path placeholder>', self._libspice_path)  # TODO: place real url here
+
     @property
     def parameters(self) -> tuple:
         return 'W0', 'L0', 'W1', 'L1', 'W2', 'L2', 'W4', 'L4'
@@ -85,14 +100,14 @@ class OneStageVoltageAmplifier(Circuit):
         return voltages
 
     def run(self, tmp_path, values):
-        with open('library/voltage/one_stage.circuit') as reader, \
+        with open(self._template_path) as reader, \
                 open(os.path.join(tmp_path, 'one_amp.sp'), 'w') as writer:
             data = reader.read()
             arg_units = 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u'
             for key, tail in zip(self.parameters, arg_units):
                 data = data.replace(f'$(params:{key})', f'%f{tail}' % getattr(values, key))
             writer.write(data)
-        shutil.copy('library/sm046005-1j.hspice', tmp_path)
+        shutil.copy(self._libspice_path, tmp_path)
 
         result = self._run_hspice('one_amp.sp', tmp_path).split('\n')
         offset = self._get_offset(result)
@@ -135,11 +150,8 @@ class OneStageVoltageAmplifier(Circuit):
         )
 
 
-def make_env(env_type='incremental', path='./tmp', context=None, benchmark=None, specs=None, total_steps=3):
+def make_incremental_env(path='./tmp', context=None, benchmark=None, specs=None, total_steps=3):
     context = context or LocalContext(path, debug=True)
     circuit = OneStageVoltageAmplifier(context)
-    if env_type == 'incremental':
-        environment = CircuitSimIncrementalEnv(circuit.evaluator(), specs, benchmark, total_steps)
-    else:
-        raise ValueError(f'invalid environment type of "{env_type}"')
+    environment = CircuitSimIncrementalEnv(circuit.evaluator(), specs, benchmark, total_steps)
     return environment

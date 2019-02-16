@@ -60,5 +60,5 @@ register(
 
 register(
     env_id='one_stage_amplifier_incremental',
-    entry_point='park.envs.circuit_sim.one_stage.voltage:make_env'
+    entry_point='park.envs.circuit_sim.one_stage.voltage:make_incremental_env'
 )
