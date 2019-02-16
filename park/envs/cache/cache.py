@@ -46,8 +46,7 @@ class CacheSim(object) :
         self.req = 0
         self.non_cache = defaultdict(list) # requested items without caching
         self.cache = defaultdict(list) # requested items with caching
-        self.cache_pq_size = []
-        self.cache_pq_time = []
+        self.cache_pq = []
         self.cache_remain = self.cache_size
         self.last_req_time_dict = {}
         self.count_ohr = 0
@@ -58,8 +57,7 @@ class CacheSim(object) :
         self.req = 0
         self.non_cache = defaultdict(list)
         self.cache = defaultdict(list)
-        self.cache_pq_size = []
-        self.cache_pq_time = []
+        self.cache_pq = []
         self.cache_remain = self.cache_size
         self.last_req_time_dict = {}
         self.count_ohr = 0
@@ -109,25 +107,19 @@ class CacheSim(object) :
                 except IndexError:
                     # can't find the object in the cache, add the object into cache after replacement, cost ++
                     while cache_size_online_remain < obj_size:
-                        if self.policy == 'size':
-                            # remove the largest object in the cache
-                            rm_id = self.cache_pq_size[0][1]
-                            cache_size_online_remain += self.cache_pq_size[0][0]
-                            cost += self.cache_pq_size[0][0]
-                        elif self.policy == 'time':
-                            # remove the oldest object in the cache
-                            rm_id = self.cache_pq_time[0][1]
-                            cache_size_online_remain += self.cache_pq_time[0][0]
-                            cost += self.cache_pq_time[0][0]
+                        rm_id = self.cache_pq[0][1]
+                        cache_size_online_remain += self.cache_pq[0][0]
+                        cost += self.cache_pq[0][0]
                         discard_obj_if_admit.append(rm_id)
-                        heapq.heappop(self.cache_pq_size)
-                        heapq.heappop(self.cache_pq_time)
+                        heapq.heappop(self.cache_pq)
                         del self.cache[rm_id]
                             
                     # add into cache
                     self.cache[obj_id] = [obj_size, req] 
-                    heapq.heappush(self.cache_pq_size, (obj_size, obj_id))
-                    heapq.heappush(self.cache_pq_time, (req, obj_id))
+                    if self.policy == 'size':
+                        heapq.heappush(self.cache_pq, (obj_size, obj_id))
+                    elif self.policy == 'time':
+                        heapq.heappush(self.cache_pq, (req, obj_id))
                     cache_size_online_remain -= obj_size
                     self.size_all += obj_size
                     # cost value is based on size, can be changed
