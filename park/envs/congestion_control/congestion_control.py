@@ -19,6 +19,16 @@ ccp_capnp = capnp.load(park.__path__[0]+"/envs/congestion_control/park/ccp.capnp
 class CcpRlAgentImpl(ccp_capnp.RLAgent.Server):
     def __init__(self, agent):
         self.agent = agent
+        self.min_rtt = 0x3fffffff
+        self.old_obs = None
+
+    def getReward(self, obs):
+        # copa's utility function: log(throughput) - delta * log(delay)
+        delta = 0.5
+        tput = obs.rout
+        delay = obs.rtt - obs.min_rtt
+
+        return (math.log2(tput) - delta * math.log2(delay), (tput, delta, delay))
 
     def getAction(self, observation, _context, **kwargs):
         obs = [
@@ -38,7 +48,18 @@ class CcpRlAgentImpl(ccp_capnp.RLAgent.Server):
             observation.rout,
         ]
 
-        act = self.agent.get_action(obs, 0, 0, 0)
+        if observation.rtt < self.min_rtt:
+            self.min_rtt = observation.rtt
+
+        # get_action(current observation, reward for previous observation, False, components of reward calculation)
+        if self.old_obs is not None:
+            reward, info = self.getReward(self.old_obs)
+        else:
+            reward, info = (0, (0, 0, 0))
+
+        act = self.agent.get_action(obs, reward, False, info)
+        self.old_obs = observation
+
         c, r = act
         action = ccp_capnp.Action.new_message(cwnd=int(c), rate=int(r))
         return action
