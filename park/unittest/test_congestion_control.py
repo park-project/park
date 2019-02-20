@@ -1,6 +1,6 @@
 import park
 
-class Agent(object):
+class RandomAgent(object):
     def __init__(self, state_space, action_space, *args, **kwargs):
         self.state_space = state_space
         self.action_space = action_space
@@ -12,4 +12,4 @@ class Agent(object):
 
 def main():
     env = park.make('congestion_control')
-    env.run(Agent, ())
+    env.run(RandomAgent, ())

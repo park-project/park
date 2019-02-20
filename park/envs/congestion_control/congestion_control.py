@@ -1,10 +1,12 @@
+from time import time, sleep
 import numpy as np
-import subprocess as sh
 import os
 import socket
+import subprocess as sh
 import sys
-from time import time, sleep
 import threading
+import wget
+import zipfile
 
 import park
 from park import core, spaces, logger
@@ -69,26 +71,27 @@ def run_forever(sock, agent):
     server = capnp.TwoPartyServer(connection, bootstrap=CcpRlAgentImpl(agent))
     server.on_disconnect().wait()
 
+def write_const_mm_trace(outfile, bw):
+    with open(outfile, 'w') as f:
+        lines = bw // 12
+        for _ in range(lines):
+            f.write("1\n")
+
 class CongestionControlEnv(core.SysEnv):
     def __init__(self):
         # check if the operating system is ubuntu
         if sys.platform != 'linux' and sys.platform != 'linux2':
             raise OSError('Congetsion control environment only tested on Linux.')
 
-        print("====> Install Dependencies")
-        if os.getuid() != 0:
-            sh.call("sudo apt install -y git build-essential autoconf automake capnproto", shell=True)
-            sh.call("sudo add-apt-repository -y ppa:keithw/mahimahi", shell=True)
-            sh.call("sudo apt-get -y update", shell=True)
-            sh.call("sudo apt-get -y install mahimahi", shell=True)
-            sh.call("sudo sysctl -w net.ipv4.ip_forward=1", shell=True)
-        else:
-            sh.call("apt install -y git build-essential autoconf automake capnproto", shell=True)
-            sh.call("add-apt-repository -y ppa:keithw/mahimahi", shell=True)
-            sh.call("apt-get -y update", shell=True)
-            sh.call("apt-get -y install mahimahi", shell=True)
-            sh.call("sysctl -w net.ipv4.ip_forward=1", shell=True)
-        print("======> Done")
+        if os.getuid() == 0:
+            raise OSError('Please run as non-root')
+
+        logger.info("Install Dependencies")
+        sh.run("sudo apt install -y git build-essential autoconf automake capnproto", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
+        sh.run("sudo add-apt-repository -y ppa:keithw/mahimahi", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
+        sh.run("sudo apt-get -y update", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
+        sh.run("sudo apt-get -y install mahimahi", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
+        sh.run("sudo sysctl -w net.ipv4.ip_forward=1", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
 
         self.setup_ccp_shim()
         self.setup_mahimahi()
@@ -123,7 +126,7 @@ class CongestionControlEnv(core.SysEnv):
         # rate = [0, 2e9 = 2 * max rate]
         self.action_space = Box(low=np.array([0, 0]), high=np.array([4800, 2e9]))
 
-        print("====> Done with init")
+        logger.info("Done with init")
 
     def run(self, agent_constructor, agent_parameters):
         self.agent = agent_constructor(self.observation_space, self.action_space, *agent_parameters)
@@ -175,20 +178,41 @@ class CongestionControlEnv(core.SysEnv):
         sleep(1.0)  # mahimahi start delay
 
     def setup_mahimahi(self):
-        print("====> Mahimahi setup")
+        logger.info("Mahimahi setup")
 
         env_path = park.__path__[0] + "/envs/congestion_control"
+        traces_path = os.path.join(env_path, 'traces/')
+
+        if not os.path.exists(traces_path):
+            sh.run("mkdir -p {}".format(traces_path), shell=True)
+            wget.download(
+                'https://www.dropbox.com/s/qw0tmgayh5d6714/cooked_traces.zip?dl=1',
+                out=env_path
+            )
+            with zipfile.ZipFile(env_path + '/cooked_traces.zip', 'r') as zip_f:
+                zip_f.extractall(traces_path)
+
+            sh.run("rm -f {}".format(env_path + '/cooked_traces.zip'), shell=True)
+            sh.run("cp /usr/share/mahimahi/traces/* {}".format(traces_path), shell=True)
+
+            # const traces
+            write_const_mm_trace(os.path.join(traces_path, "const12.mahi"), 12)
+            write_const_mm_trace(os.path.join(traces_path, "const24.mahi"), 24)
+            write_const_mm_trace(os.path.join(traces_path, "const36.mahi"), 36)
+            write_const_mm_trace(os.path.join(traces_path, "const48.mahi"), 48)
+            write_const_mm_trace(os.path.join(traces_path, "const60.mahi"), 60)
+            write_const_mm_trace(os.path.join(traces_path, "const72.mahi"), 72)
+            write_const_mm_trace(os.path.join(traces_path, "const84.mahi"), 84)
+            write_const_mm_trace(os.path.join(traces_path, "const96.mahi"), 96)
 
         # Setup link
-        #self.linkDelay = config.congestion_control_link_delay
-        #self.uplinkTraceFile = config.congestion_control_uplink_trace
-        #self.downlinkTraceFile = config.congestion_control_downlink_trace
-        self.linkDelay = 25
-        self.uplinkTraceFile = os.path.join(env_path, "bw48.mahi")
-        self.downlinkTraceFile = os.path.join(env_path, "bw48.mahi")
+        logger.debug(park.param.config)
+        self.linkDelay = park.param.config.cc_delay
+        self.uplinkTraceFile = os.path.join(traces_path, park.param.config.cc_uplink_trace)
+        self.downlinkTraceFile = os.path.join(traces_path, park.param.config.cc_downlink_trace)
 
         # Setup workload generator
-        self.workloadGeneratorSender   = "iperf -c 100.64.0.1 -Z ccp -P 1 -i 2 -t 10000"
+        self.workloadGeneratorSender   = "iperf -c 100.64.0.1 -Z ccp -P 1 -i 2 -t {}".format(park.param.config.cc_duration)
         self.workloadGeneratorReceiver = "iperf -s -w 16m"
         self.workloadGeneratorKiller   = "pkill -9 iperf"
 
@@ -202,19 +226,20 @@ class CongestionControlEnv(core.SysEnv):
 
         # ccp-kernel
         if not os.path.exists(cong_env_path + "/ccp-kernel"):
-            print("====> Downloading ccp-kernel")
+            logger.info("Downloading ccp-kernel")
             sh.run("git clone --recursive https://github.com/ccp-project/ccp-kernel.git {}".format(cong_env_path + "/ccp-kernel"), shell=True)
 
-        loaded = sh.check_output("lsmod | grep -c ccp", shell=True)
-        if int(loaded.strip()) == 0:
-            print("====> Loading ccp-kernel")
+        try:
+            sh.check_call("lsmod | grep ccp", shell=True)
+        except sh.CalledProcessError:
+            logger.info('Loading ccp-kernel')
             sh.run("make && sudo ./ccp_kernel_load ipc=0", cwd=cong_env_path + "/ccp-kernel", shell=True)
 
         try:
-            print("====> Building ccp shim")
+            logger.info("Building ccp shim")
             sh.check_call("cargo build --release", cwd=cong_env_path + "/park", shell=True)
         except sh.CalledProcessError:
-            print("====> Installing rust")
+            logger.info("Installing rust")
             sh.check_call("bash rust-install.sh", cwd=cong_env_path, shell=True)
-            print("====> Building ccp shim")
+            logger.info("Building ccp shim")
             sh.check_call("~/.cargo/bin/cargo build --release", cwd=cong_env_path + "/park", shell=True)
