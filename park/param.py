@@ -110,8 +110,8 @@ parser.add_argument('--pl_n_devs', type=int, default=2,
 
 # -- Congestion Control --
 parser.add_argument('--cc_delay', type=int, default=25, help='Link delay to run experiment with')
-parser.add_argument('--cc_uplink_trace', type=str, default="const48", help='Uplink trace to use')
-parser.add_argument('--cc_downlink_trace', type=str, default="const48", help='Uplink trace to use')
+parser.add_argument('--cc_uplink_trace', type=str, default="const48.mahi", help='Uplink trace to use')
+parser.add_argument('--cc_downlink_trace', type=str, default="const48.mahi", help='Uplink trace to use')
 parser.add_argument('--cc_duration', type=int, default=120, help='How long of an experiment to run')
 
 config, _ = parser.parse_known_args()

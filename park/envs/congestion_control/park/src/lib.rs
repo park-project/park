@@ -48,8 +48,11 @@ impl<I: Ipc> ParkFlow<I> {
     ) -> std::io::Result<Self> {
         let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
 
+        use std::net::ToSocketAddrs;
         let stream = runtime
-            .block_on(tokio::net::UnixStream::connect(rl_server_addr))
+            .block_on(tokio::net::TcpStream::connect(
+                &rl_server_addr.to_socket_addrs().unwrap().next().unwrap(),
+            ))
             .unwrap();
 
         use capnp_rpc::{rpc_twoparty_capnp, twoparty, RpcSystem};
@@ -118,6 +121,9 @@ impl<I: Ipc> portus::Flow for ParkFlow<I> {
             .map(|r| ("Rate", r))
             .chain(cwnd.into_iter().map(|c| ("Cwnd", c)))
             .collect();
-        self.dp.update_field(&self.sc, &updates).unwrap();
+
+        if !updates.is_empty() {
+            self.dp.update_field(&self.sc, &updates).unwrap();
+        }
     }
 }

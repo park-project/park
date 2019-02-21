@@ -1,4 +1,5 @@
 from time import time, sleep
+import math
 import numpy as np
 import os
 import socket
@@ -28,9 +29,11 @@ class CcpRlAgentImpl(ccp_capnp.RLAgent.Server):
         # copa's utility function: log(throughput) - delta * log(delay)
         delta = 0.5
         tput = obs.rout
-        delay = obs.rtt - obs.min_rtt
+        delay = obs.rtt - self.min_rtt
 
-        return (math.log2(tput) - delta * math.log2(delay), (tput, delta, delay))
+        logtput = math.log2(tput) if tput > 0 else 0
+        logdelay = math.log2(delay) if delay > 0 else 0
+        return (logtput - delta * logdelay, (tput, delta, delay))
 
     def getAction(self, observation, _context, **kwargs):
         obs = [
@@ -66,10 +69,25 @@ class CcpRlAgentImpl(ccp_capnp.RLAgent.Server):
         action = ccp_capnp.Action.new_message(cwnd=int(c), rate=int(r))
         return action
 
-def run_forever(sock, agent):
-    connection, _ = sock.accept()
-    server = capnp.TwoPartyServer(connection, bootstrap=CcpRlAgentImpl(agent))
-    server.on_disconnect().wait()
+class ShimAgent(object):
+    def __init__(self):
+        self.agent = None
+
+    def set_agent(self, agent):
+        self.agent = agent
+
+    def get_action(self, *args):
+        if self.agent is not None:
+            return self.agent.get_action(*args)
+        else:
+            return (0,0)
+
+global_agent = ShimAgent()
+
+def run_forever(addr, agent):
+    server = capnp.TwoPartyServer(addr, bootstrap=CcpRlAgentImpl(agent))
+    logger.info("Started RL agent in RPC server thread")
+    server.run_forever()
 
 def write_const_mm_trace(outfile, bw):
     with open(outfile, 'w') as f:
@@ -93,10 +111,9 @@ class CongestionControlEnv(core.SysEnv):
         sh.run("sudo apt-get -y install mahimahi", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
         sh.run("sudo sysctl -w net.ipv4.ip_forward=1", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
 
+        sh.run("sudo rm -rf /tmp/park-ccp", shell=True)
         self.setup_ccp_shim()
         self.setup_mahimahi()
-
-        sh.run("sudo rm -rf /tmp/park-ccp", shell=True)
 
         # state_space
         #
@@ -126,36 +143,39 @@ class CongestionControlEnv(core.SysEnv):
         # rate = [0, 2e9 = 2 * max rate]
         self.action_space = Box(low=np.array([0, 0]), high=np.array([4800, 2e9]))
 
+        # kill old shim process
+        sh.run("sudo pkill -9 park", shell=True)
+        sh.Popen(self.workloadGeneratorKiller, shell=True).wait()
+        sleep(1.0)  # pkill has delay
+
+        # start rlagent rpc server that ccp talks to
+        logger.info("Starting RPC server thread")
+        global global_agent
+        t = threading.Thread(target=run_forever, args=("*:4539", global_agent))
+        t.daemon = True
+        t.start()
+
+        # start ccp shim
+        logger.info("Starting CCP shim process")
+        cong_env_path = park.__path__[0] + "/envs/congestion_control"
+        sh.Popen("sudo " + os.path.join(cong_env_path, "park/target/release/park 2> /dev/null"), shell=True)
+        sleep(1.0)  # spawn has delay
+
+        # start workload generator receiver
+        sh.Popen(self.workloadGeneratorReceiver, shell=True)
+
         logger.info("Done with init")
 
     def run(self, agent_constructor, agent_parameters):
-        self.agent = agent_constructor(self.observation_space, self.action_space, *agent_parameters)
-
-        # setup capnp
-        sock = socket.socket(family=socket.AF_UNIX)
-        sock.bind("/tmp/park-ccp")
-        sock.listen()
-
-        # start rlagent rpc server that ccp talks to
-        threading.Thread(target=run_forever, args=(sock, self.agent)).start()
-
-        # start ccp shim
-        cong_env_path = park.__path__[0] + "/envs/congestion_control"
-        sh.Popen("sudo " + os.path.join(cong_env_path, "park/target/release/park"), shell=True)
+        agent = agent_constructor(self.observation_space, self.action_space, *agent_parameters)
+        logger.info("Setting new agent")
+        global global_agent
+        global_agent.set_agent(agent)
 
         # Start
         self.reset()
 
     def reset(self):
-        # kill Mahimahi and workload generator
-        sh.Popen("pkill mm-delay", shell=True).wait()
-        sh.Popen(self.workloadGeneratorKiller, shell=True).wait()
-
-        sleep(1.0)  # pkill has delay
-
-        # start workload generator receiver
-        sh.Popen(self.workloadGeneratorReceiver, shell=True)
-
         # start Mahimahi
         config_dict = {}
 
@@ -173,9 +193,8 @@ class CongestionControlEnv(core.SysEnv):
                 --uplink-queue=droptail --downlink-queue=droptail --uplink-queue-args=\"packets=2000\" --downlink-queue-args=\"packets=2000\"\
                 %(workloadSender)s "% config_dict
 
-        sh.Popen(start_mahimahi_cmd, shell=True)
-
-        sleep(1.0)  # mahimahi start delay
+        sh.run(start_mahimahi_cmd, shell=True)
+        sleep(1.0)
 
     def setup_mahimahi(self):
         logger.info("Mahimahi setup")
@@ -213,8 +232,8 @@ class CongestionControlEnv(core.SysEnv):
 
         # Setup workload generator
         self.workloadGeneratorSender   = "iperf -c 100.64.0.1 -Z ccp -P 1 -i 2 -t {}".format(park.param.config.cc_duration)
-        self.workloadGeneratorReceiver = "iperf -s -w 16m"
-        self.workloadGeneratorKiller   = "pkill -9 iperf"
+        self.workloadGeneratorReceiver = "iperf -s -w 16m > /dev/null"
+        self.workloadGeneratorKiller   = "sudo pkill -9 iperf"
 
         with open("sender.sh","w") as fout:
             fout.write(self.workloadGeneratorSender+"\n")
@@ -231,6 +250,7 @@ class CongestionControlEnv(core.SysEnv):
 
         try:
             sh.check_call("lsmod | grep ccp", shell=True)
+            sh.run("make && sudo ./ccp_kernel_unload && sudo ./ccp_kernel_load ipc=0", cwd=cong_env_path + "/ccp-kernel", shell=True)
         except sh.CalledProcessError:
             logger.info('Loading ccp-kernel')
             sh.run("make && sudo ./ccp_kernel_load ipc=0", cwd=cong_env_path + "/ccp-kernel", shell=True)
