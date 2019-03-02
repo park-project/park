@@ -57,3 +57,8 @@ register(
     env_id='tf_placement',
     entry_point='park.envs.tf_placement:TFPlacementEnv'
 )
+
+register(
+    env_id='tf_placement_sim',
+    entry_point='park.envs.tf_placement_sim:TFPlacementSimEnv'
+)

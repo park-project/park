@@ -83,8 +83,10 @@ parser.add_argument('--qopt_dataset', type=str, required=False,
 # -- Cache --
 parser.add_argument('--cache_trace', type=str, required=False, default='test', 
                     help='trace selection')
+parser.add_argument('--cache_replace_policy', type=str, required=False, default='size', 
+                    help='cache replacement policy')
 parser.add_argument('--cache_size', type=int, required=False, default=1024, 
-                    help='size of network cache')
+                    help='cache size')
 
 # -- Simple Queue --
 parser.add_argument('--sq_num_servers', type=float, default=5,

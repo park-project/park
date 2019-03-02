@@ -105,8 +105,7 @@ class LoadBalanceEnv(core.Env):
             load = sum(j.size for j in server.queue)
             if server.curr_job is not None:
                 # remaining work currently being processed
-                load += (server.curr_job.finish_time
-                        - self.wall_time.curr_time) * server.service_rate
+                load += server.curr_job.finish_time - self.wall_time.curr_time
             # if the load is larger than observation threshold
             # report a warning
             if load > self.obs_high[server.server_id]:
