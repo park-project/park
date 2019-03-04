@@ -21,10 +21,9 @@ class TwoStageTransimpedanceAmplifier(Circuit):
     @property
     def libdata(self):
         if not hasattr(self, '__cache_libdata__'):
-            data = load_txt(park.envs.circuit_sim.__file__ + 'library/transimpedance/two_stage.circuit')
+            data = load_txt(park.envs.circuit_sim.__file__ + 'library/ee214.hspice')
             setattr(self, '__cache_libdata__', data)
         return getattr(self, '__cache_libdata__')
-
 
     @property
     def parameters(self):

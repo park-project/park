@@ -1,15 +1,30 @@
 import os
 import re
 
-from circuit.circuit import Circuit, export_circuit
-from utility.learn import SCALAR_SPACE, Box, Discrete
-from utility.misc import AttrDict
+from park.envs.circuit_sim.circuit import Circuit, export_circuit
+from park.envs.circuit_sim.utility.io import load_txt
+from park.envs.circuit_sim.utility.learn import SCALAR_SPACE, Box, Discrete
+from park.envs.circuit_sim.utility.misc import AttrDict
 
 __all__ = ['ThreeStageTranimpedenceAmplifier']
 
 
 @export_circuit
 class ThreeStageTranimpedenceAmplifier(Circuit):
+    @property
+    def simdata(self):
+        if not hasattr(self, '__cache_simdata__'):
+            data = load_txt('./park/envs/circuit_sim/library/transimpedance/three_stage.circuit')
+            setattr(self, '__cache_simdata__', data)
+        return getattr(self, '__cache_simdata__')
+
+    @property
+    def libdata(self):
+        if not hasattr(self, '__cache_libdata__'):
+            data = load_txt('./park/envs/circuit_sim/library/ee114.hspice')
+            setattr(self, '__cache_libdata__', data)
+        return getattr(self, '__cache_libdata__')
+
     @property
     def parameters(self):
         return 'W1', 'WL1', 'WB1', 'W2', 'WL2', 'WB2', 'W3', 'WB3', 'WB', 'L1', \
@@ -96,19 +111,17 @@ class ThreeStageTranimpedenceAmplifier(Circuit):
         return voltages
 
     def run(self, tmp_path, values):
-        with open('library/transimpedance/three_stage.circuit', 'r') as reader, \
-                open(os.path.join(tmp_path, 'three_amp.sp'), 'w') as writer:
-            data = reader.read()
+        with open(os.path.join(tmp_path, 'three_amp.sp'), 'w') as writer:
+            data = self.simdata
             args_units = ['u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u',
                           'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'k']
             for key, tail in zip(self.parameters, args_units):
                 data = data.replace(f'$(params:{key})', f'%f{tail}' % getattr(values, key))
             writer.write(data)
-        with open('library/ee114.hspice', 'r') as reader, \
-                open(os.path.join(tmp_path, 'ee114.hspice'), 'w') as writer:
+        with open(os.path.join(tmp_path, 'ee114.hspice'), 'w') as writer:
             parameters = '.param L1=%fu, L2=%fu, L3=%fu, L4=%fu, L5=%fu, L6=%fu, L7=%fu, L8=%fu, L9=%fu' % (
                 values.L1, values.LL1, values.LB1, values.L2, values.LL2, values.LB2, values.L3, values.LB3, values.LB)
-            writer.write(reader.read().replace('$(params:all_L)', parameters))
+            writer.write(self.libdata.replace('$(params:all_L)', parameters))
 
         result = self._run_hspice('three_amp', tmp_path).split('\n')
         with open(os.path.join(tmp_path, 'three_amp.ic0'), 'r') as reader:
@@ -135,6 +148,8 @@ class ThreeStageTranimpedenceAmplifier(Circuit):
                 area=SCALAR_SPACE,
                 saturated=Discrete(2, 'bool')
             ),
+            transistor_states=Box([17]),
+            voltages=Box([12]),
             curve=AttrDict(
                 frequency=Box([8001]),
                 magnitude=Box([8001]),

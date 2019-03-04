@@ -4,7 +4,7 @@ from park.envs.circuit_sim.circuit import LocalContext, make_circuit
 
 
 class TestCircuit(unittest.TestCase):
-    def run_evaluator(self):
+    def test_evaluator(self):
         with LocalContext():
             evaluator = make_circuit('ThreeStageTranimpedenceAmplifier').evaluator()
             #         return {'W1': 2, 'WL1': 2, 'WB1': 2, 'W2': 2, 'WL2': 2, 'WB2': 2, 'W3': 2, 'WB3': 2, 'WB': 2,
@@ -38,4 +38,4 @@ class TestCircuit(unittest.TestCase):
 
             evaluator.set_bound('RB', 10, 1000)
 
-            print(evaluator.sample())
+            print(evaluator.sample().voltages.__len__())
