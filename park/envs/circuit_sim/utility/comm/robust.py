@@ -1,104 +1,27 @@
-import abc
 import asyncio
 import concurrent.futures
-import contextlib
 import functools
 
 import zmq
 import zmq.asyncio
 
-from park import logger
-from park.envs.circuit_sim.utils import graceful_execute, make_pool
+from park.envs.circuit_sim.utility.comm._base import socket_bind, _AbstractNode, socket_connect
+from park.envs.circuit_sim.utility.concurrency import make_pool, graceful_execute
+from park.envs.circuit_sim.utility.logging import get_default_logger
 
-__all__ = ['_AbstractNode', 'socket_bind', 'socket_unbind', 'socket_connect', 'socket_disconnect',
-           'RobustClient', 'RobustServer']
-
-
-class _AbstractNode(object, metaclass=abc.ABCMeta):
-    def __init__(self):
-        self._context = None
-        self.__internal_context = None
-
-    def initialize(self, context: zmq.Context = None):
-        if self.__internal_context:
-            raise ValueError("Node has already been activated.")
-        if context:
-            self.__internal_context = False
-            return context
-        self.__internal_context = True
-        self._context = zmq.Context().instance()
-
-    def finalize(self):
-        if self.__internal_context:
-            self._context.term()
-        self._context = None
-        self.__internal_context = None
-
-    @property
-    def context(self) -> zmq.Context:
-        return self._context
-
-    @contextlib.contextmanager
-    def on_context(self, context) -> '_AbstractNode':
-        try:
-            self.initialize(context)
-            yield self
-        finally:
-            self.finalize()
-
-    def __enter__(self):
-        self.initialize()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.finalize()
-
-
-def socket_bind(socket: zmq.Socket, protocol, interface=None, port=None):
-    if protocol == 'tcp':
-        assert interface is None
-        if port is None:
-            port = socket.bind_to_random_port('tcp://0.0.0.0')
-        else:
-            socket.bind(f'tcp://0.0.0.0:{port}')
-        return port
-    else:
-        assert interface is not None
-        socket.bind(f'tcp://{interface}')
-
-
-def socket_unbind(socket: zmq.Socket, protocol, interface=None, port=None):
-    if protocol == 'tcp':
-        assert port is not None and interface is None
-        socket.unbind(f'tcp://0.0.0.0:{port}')
-    else:
-        assert interface is not None
-        socket.unbind(f'tcp://{interface}')
-
-
-def socket_connect(socket: zmq.Socket, protocol, interface, port=None):
-    if protocol == 'tcp':
-        assert port is not None
-        socket.connect(f'{protocol}://{interface}:{port}')
-    else:
-        assert port is None
-        socket.connect(f'{protocol}://{interface}')
-
-
-def socket_disconnect(socket: zmq.Socket, protocol, interface, port=None):
-    if protocol == 'tcp':
-        assert port is not None
-        socket.disconnect(f'{protocol}://{interface}:{port}')
-    else:
-        assert port is None
-        socket.disconnect(f'{protocol}://{interface}')
+__all__ = ['RobustServer', 'RobustClient']
 
 
 class RobustClient(_AbstractNode):
-    def __init__(self):
+    def __init__(self, logger=None):
         super().__init__()
         self._socket = None
+        self._logger = logger or get_default_logger(self.__class__.__name__)
         self._counter = None
+
+    @property
+    def logger(self):
+        return self._logger
 
     def initialize(self, context: zmq.Context = None):
         super(RobustClient, self).initialize(context)
@@ -136,34 +59,39 @@ class RobustClient(_AbstractNode):
                 except zmq.ZMQError:
                     has_events = bool(self._socket.poll(timeout * 1000))
                     if not has_events:
-                        logger.info('Resend heartbeat signal because the server seems dead.')
+                        self._logger.info('Resend heartbeat signal because the server seems dead.')
                         self._socket.send_multipart([str(timeout).encode('utf-8'), b'h'], copy=False)
                         continue
                     flag, *payload = self._socket.recv_multipart(zmq.DONTWAIT, copy=True)
                 if flag == b'h':
-                    logger.debug(f'Received server response for heartbeat.')
+                    self._logger.debug(f'Received server response for heartbeat.')
                 elif flag == b'e':
                     message, = payload
                     message = message.decode('utf-8')
                     raise RuntimeError(f'Error occurs when execute request on server: "{message}"')
                 elif flag == b'r':
-                    logger.debug(f'Resend the message required by the server')
+                    self._logger.debug(f'Resend the message required by the server')
                     break
                 elif flag not in tasks:
-                    logger.warning('Receive outdated index result from the server')
+                    self._logger.warning('Receive outdated index result from the server')
                 else:
                     tasks.pop(flag)
                     yield payload
 
 
 class RobustServer(_AbstractNode):
-    def __init__(self, mode='thread', workers=None):
+    def __init__(self, mode='thread', workers=None, logger=None):
         super().__init__()
         self._socket = None
+        self._logger = logger or get_default_logger(self.__class__.__name__)
         self._workers = workers
         self._mode = mode
         self._pool = None
         self._ongoing_tasks = None
+
+    @property
+    def logger(self):
+        return self._logger
 
     def bind(self, protocol, interface=None, port=None):
         return socket_bind(self._socket, protocol, interface, port)
@@ -189,10 +117,8 @@ class RobustServer(_AbstractNode):
     def _task_callback(self, identity, index, future: asyncio.Future):
         exception = future.exception()
         self._ongoing_tasks[identity].remove(index)
-        if not self._ongoing_tasks[identity]:
-            self._ongoing_tasks.pop(identity)
         if exception:
-            logger.exception(f'An exception occurred when handling task.', exc_info=exception)
+            self._logger.exception(f'An exception occurred when handling task.', exc_info=exception)
             coroutine = self._socket.send_multipart([identity, b'e', str(exception).encode('utf-8')], copy=False)
         else:
             result = future.result()
@@ -212,6 +138,9 @@ class RobustServer(_AbstractNode):
     async def _heartbeat_after(self, identity, interval):
         while identity in self._ongoing_tasks:
             await asyncio.sleep(interval)
+            if not self._ongoing_tasks[identity]:
+                self._ongoing_tasks.pop(identity)
+                break
             await self._socket.send_multipart([identity, b'h'], flags=zmq.DONTWAIT, copy=False)
 
     async def _handler(self, identity, payload, callback):
@@ -219,8 +148,8 @@ class RobustServer(_AbstractNode):
 
         request_resend = False
         if identity not in self._ongoing_tasks:
-            _ = asyncio.ensure_future(self._heartbeat_after(identity, float(timeout) / 2))
             self._ongoing_tasks[identity] = set()
+            _ = asyncio.ensure_future(self._heartbeat_after(identity, float(timeout) / 2))
             request_resend = True
 
         if index == b'h':
@@ -231,7 +160,7 @@ class RobustServer(_AbstractNode):
             return
 
         if index in self._ongoing_tasks[identity]:
-            logger.info('Duplicated index found from the client')
+            self._logger.info('Duplicated index found from the client')
             return
         self._ongoing_tasks[identity].add(index)
 
@@ -253,7 +182,7 @@ class RobustServer(_AbstractNode):
             except KeyboardInterrupt:
                 raise
             except Exception as exception:
-                logger.exception(f'An exception occurred when handling message.')
+                self._logger.exception(f'An exception occurred when handling message.')
                 await self._socket.send_multipart([identity, b'e', str(exception).encode('utf-8')],
                                                   flags=zmq.DONTWAIT, copy=False)
 

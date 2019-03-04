@@ -1,11 +1,11 @@
 import numpy as np
 
-from park.envs.circuit_sim.utils import AttrDict
+from park.envs.circuit_sim.utility.misc import AttrDict
 
-__all__ = ['Benchmark']
+__all__ = ['Rater']
 
 
-class Benchmark(object):
+class Rater(object):
     __SCALES__ = {
         'linear': lambda a, b: a / b,
         'log': lambda a, b: np.log10(a) / np.log10(b)
@@ -57,13 +57,12 @@ class Benchmark(object):
     def __repr__(self):
         return self.__str__()
 
-    def __call__(self, metrics, specs):
-        if isinstance(metrics, dict):
-            metrics = AttrDict(**metrics)
-        if isinstance(specs, dict):
-            specs = AttrDict(**specs)
-        if metrics is None:
+    def __call__(self, values, result, specs):
+        if result is None:
             return self._score_fail
+        metrics = result.metrics
+        metrics = AttrDict(**metrics)
+        specs = AttrDict(**specs)
         if self._score_unsaturated is not None and not metrics.saturated:
             return self._score_unsaturated
         satisfied = True

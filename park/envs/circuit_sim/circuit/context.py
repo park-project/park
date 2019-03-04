@@ -3,8 +3,11 @@ import concurrent.futures
 import functools
 import os
 
-from park import logger
-from park.envs.circuit_sim.utils import open_tmp_path, AttrDict, loads_pickle, dumps_pickle, make_pool, RobustClient
+from park.envs.circuit_sim.utility.comm import RobustClient
+from park.envs.circuit_sim.utility.concurrency import make_pool
+from park.envs.circuit_sim.utility.io import open_tmp_path, loads_pickle, dumps_pickle
+from park.envs.circuit_sim.utility.logging import get_default_logger
+from park.envs.circuit_sim.utility.misc import AttrDict
 
 __all__ = ['Context', 'RemoteContext', 'AsyncLocalContext', 'LocalContext']
 
@@ -12,14 +15,25 @@ __all__ = ['Context', 'RemoteContext', 'AsyncLocalContext', 'LocalContext']
 class Context(object, metaclass=abc.ABCMeta):
     __current_context = []
 
-    def __init__(self, debug=False):
+    def __init__(self, debug='onerror'):
         self._debug = debug
         self.__opened = False
 
     @staticmethod
-    def _evaluate(path, circuit, values, debug):
-        with open_tmp_path(os.path.join(path, circuit.__class__.__name__), 'timepid', debug) as path:
-            return circuit.run(path, AttrDict(**values))
+    def _evaluate(path, circuit, values, debug, no_except=False):
+        base_path = os.path.join(path, circuit.__class__.__name__)
+        with open_tmp_path(base_path, 'timepid', debug) as path:
+            try:
+                result = circuit.run(path, AttrDict(**values))
+                if debug:
+                    result.tmp_path = path
+                return result
+            except Exception as e:
+                wrapped_exception = RuntimeError(f"Circuit simulation error (path={path})")
+                wrapped_exception.__cause__ = e
+                if no_except:
+                    return wrapped_exception
+                raise wrapped_exception
 
     @abc.abstractmethod
     def evaluate(self, circuit, values, debug=None):
@@ -30,8 +44,14 @@ class Context(object, metaclass=abc.ABCMeta):
         pass
 
     @classmethod
-    def current_context(cls):
+    def current_context(cls) -> 'Context':
+        if not cls.__current_context:
+            raise ValueError('No context is opened.')
         return cls.__current_context[-1]
+
+    @classmethod
+    def any_opened(cls):
+        return len(cls.__current_context) > 0
 
     @property
     def opened(self):
@@ -52,7 +72,7 @@ class Context(object, metaclass=abc.ABCMeta):
 
 
 class LocalContext(Context):
-    def __init__(self, path, debug=False):
+    def __init__(self, path='./tmp', debug='onerror'):
         super().__init__(debug)
         self._path = path
         self._pool = None
@@ -77,7 +97,8 @@ class LocalContext(Context):
 
     def evaluate_batch(self, circuit, values, debug=None):
         debug = self._debug if debug is None else debug
-        return self._pool.map(functools.partial(self._evaluate, self._path, circuit, debug=debug), values)
+        func = functools.partial(self._evaluate, self._path, circuit, debug=debug, no_except=True)
+        return self._pool.map(func, values)
 
     def __getstate__(self):
         state = dict(self.__dict__)
@@ -102,17 +123,18 @@ class AsyncLocalContext(LocalContext):
     def evaluate_batch(self, circuit, values, debug=None):
         future = concurrent.futures.Future()
         debug = self._debug if debug is None else debug
-        func = functools.partial(self._evaluate, self._path, circuit, debug=debug)
+        func = functools.partial(self._evaluate, self._path, circuit, debug=debug, no_except=True)
         self._pool.map_async(func, values, callback=future.set_result, error_callback=future.set_exception)
         return future
 
 
 class RemoteContext(Context):
-    def __init__(self, host, port, debug=False):
+    def __init__(self, host, port, logger=None, debug='onerror'):
         super().__init__(debug)
         self._host = host
         self._port = port
-        self._client = RobustClient()
+        self._logger = logger or get_default_logger(self.__class__.__name__)
+        self._client = RobustClient(self._logger)
 
     def __enter__(self):
         super(RemoteContext, self).__enter__()
@@ -129,16 +151,12 @@ class RemoteContext(Context):
         name = circuit.__class__.__name__.encode('utf-8')
         method = str(method).encode('utf-8')
         values = dumps_pickle(values)
-        debug = str(int(debug)).encode('utf-8')
+        debug = dumps_pickle(debug)
         return name, method, values, debug
 
     def _request(self, name, method, values, debug):
-        try:
-            result, = self._client.request(name, method, values, debug)
-            return loads_pickle(result)
-        except:
-            logger.exception("Exception occurred at remote server.")
-            return None
+        result, = self._client.request(name, method, values, debug)
+        return loads_pickle(result)
 
     def evaluate(self, circuit, values, debug=None):
         debug = self._debug if debug is None else debug
