@@ -1,6 +1,6 @@
 import unittest
 
-from circuit import LocalContext, make_circuit
+from park.envs.circuit_sim.circuit import LocalContext, make_circuit
 
 
 class TestCircuit(unittest.TestCase):
