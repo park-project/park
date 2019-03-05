@@ -1,6 +1,8 @@
 import os
 import re
 
+import numpy as np
+
 from park.envs.circuit_sim.circuit import Circuit, export_circuit
 from park.envs.circuit_sim.utility.io import load_txt
 from park.envs.circuit_sim.utility.misc import AttrDict
@@ -142,17 +144,17 @@ class ThreeStageTranimpedenceAmplifier(Circuit):
     def out_space(self):
         return AttrDict(
             metrics=AttrDict(
-                power=Box(shape=[]),
-                gain=Box(shape=[]),
-                bandwidth=Box(shape=[]),
-                area=Box(shape=[]),
-                saturated=Box(shape=[], low=0, high=1) # bool
+                power=Box(low=-np.inf, high=np.inf, shape=[], dtype=np.float32),
+                gain=Box(low=-np.inf, high=np.inf, shape=[], dtype=np.float32),
+                bandwidth=Box(low=-np.inf, high=np.inf, shape=[], dtype=np.float32),
+                area=Box(low=-np.inf, high=np.inf, shape=[], dtype=np.float32),
+                saturated=Box(shape=[], low=0, high=1, dtype=np.float32) # bool
             ),
-            transistor_states=Box(shape=[17]),
-            voltages=Box(shape=[12]),
+            transistor_states=Box(low=-np.inf, high=np.inf, shape=[17], dtype=np.float32),
+            voltages=Box(low=-np.inf, high=np.inf, shape=[12], dtype=np.float32),
             curve=AttrDict(
-                frequency=Box(shape=[8001]),
-                magnitude=Box(shape=[8001]),
-                phase=Box(shape=[8001])
+                frequency=Box(low=-np.inf, high=np.inf, shape=[8001], dtype=np.float32),
+                magnitude=Box(low=-np.inf, high=np.inf, shape=[8001], dtype=np.float32),
+                phase=Box(low=-np.inf, high=np.inf, shape=[8001], dtype=np.float32)
             )
         )

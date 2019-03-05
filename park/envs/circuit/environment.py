@@ -11,7 +11,8 @@ class CircuitEnv(Env):
         self._evaluator = evaluator
         self._benchmark = benchmark
         self._obs_mark = obs_mark
-        self.observation_space, _ = ordered_flatten(nested_select(self._evaluator.out_space, obs_mark))
+        self.observation_space = ordered_flatten(nested_select(self._evaluator.out_space, obs_mark)[0])
+        self.observation_space = Tuple(self.observation_space)
         self.action_space = self._evaluator.in_space
 
     def _reset_internal_state(self):
@@ -31,13 +32,11 @@ class CircuitEnv(Env):
             return np.zeros(self.observation_space.shape)
 
 
-class CircuitJointedEnv(CircuitEnv):
+class CircuitPointedEnv(CircuitEnv):
     def __init__(self, evaluator: Evaluator, benchmark, obs_mark, total_steps):
         super().__init__(evaluator, benchmark, obs_mark)
         self._total_steps = total_steps
 
-
-class CircuitPointedEnv(CircuitJointedEnv):
     def reset(self):
         self._reset_internal_state()
         return self.zero_obs()

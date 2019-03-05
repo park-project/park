@@ -84,9 +84,9 @@ class Circuit(object, metaclass=abc.ABCMeta):
     def out_space(self):
         pass
 
-    @property
-    def in_space(self):
-        return Box(shape=len(self.parameters))
+    # @property
+    # def in_space(self):
+    #     return Box(shape=len(self.parameters))
 
 
 class Evaluator(object):
@@ -149,8 +149,8 @@ class Evaluator(object):
 
     @property
     def in_space(self):
-        space = Box(low=self.lower_bound, high=self.upper_bound)
-        assert space.shape == self._circuit.in_space.shape
+        space = Box(low=np.asarray(self.lower_bound), high=np.asarray(self.upper_bound), dtype=np.float32)
+        # assert space.shape == self._circuit.in_space.shape
         return space
 
     def __setitem__(self, key, value):
