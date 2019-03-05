@@ -3,8 +3,8 @@ import re
 
 from park.envs.circuit_sim.circuit import Circuit, export_circuit
 from park.envs.circuit_sim.utility.io import load_txt
-from park.envs.circuit_sim.utility.learn import SCALAR_SPACE, Box, Discrete
 from park.envs.circuit_sim.utility.misc import AttrDict
+from park.spaces import Box
 
 __all__ = ['ThreeStageTranimpedenceAmplifier']
 
@@ -142,17 +142,17 @@ class ThreeStageTranimpedenceAmplifier(Circuit):
     def out_space(self):
         return AttrDict(
             metrics=AttrDict(
-                power=SCALAR_SPACE,
-                gain=SCALAR_SPACE,
-                bandwidth=SCALAR_SPACE,
-                area=SCALAR_SPACE,
-                saturated=Discrete(2, 'bool')
+                power=Box(shape=[]),
+                gain=Box(shape=[]),
+                bandwidth=Box(shape=[]),
+                area=Box(shape=[]),
+                saturated=Box(shape=[], low=0, high=1) # bool
             ),
-            transistor_states=Box([17]),
-            voltages=Box([12]),
+            transistor_states=Box(shape=[17]),
+            voltages=Box(shape=[12]),
             curve=AttrDict(
-                frequency=Box([8001]),
-                magnitude=Box([8001]),
-                phase=Box([8001])
+                frequency=Box(shape=[8001]),
+                magnitude=Box(shape=[8001]),
+                phase=Box(shape=[8001])
             )
         )

@@ -108,8 +108,9 @@ parser.add_argument('--pl_graph', type=str, default='inception',
 parser.add_argument('--pl_n_devs', type=int, default=2,
                     help='Number of devices to split the graph across')
 
-parser.add_argument('--circuit-host', type=str, default=None)
-parser.add_argument('--circuit-port', type=int, default=None)
-parser.add_argument('--circuit-env-type', type=str, default='absolute')
+parser.add_argument('--circuit_host', type=str, default=None)
+parser.add_argument('--circuit_port', type=int, default=None)
+parser.add_argument('--circuit_tmp_path', type=int, default=None)
+parser.add_argument('--circuit_env_type', type=str, default='absolute')
 
 config, _ = parser.parse_known_args()

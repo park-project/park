@@ -1,4 +1,4 @@
-__all__ = ['AttrDict', 'flatten', 'nested_update', 'nested_select', 'nested_setdefault']
+__all__ = ['AttrDict', 'flatten', 'nested_update', 'nested_select', 'nested_setdefault', 'ordered_flatten']
 
 
 class AttrDict(dict):
@@ -27,6 +27,19 @@ def flatten(d):
                 results.extend(flatten(i))
             else:
                 results.append(i)
+        return results
+    else:
+        return d
+
+
+def ordered_flatten(d):
+    if isinstance(d, dict):
+        results = []
+        for key in sorted(d.keys()):
+            if isinstance(d[key], dict):
+                results.extend(ordered_flatten(d[key]))
+            else:
+                results.append(d[key])
         return results
     else:
         return d

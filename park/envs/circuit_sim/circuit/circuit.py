@@ -7,8 +7,8 @@ import traceback
 import numpy as np
 
 from park.envs.circuit_sim.circuit import Context, LocalContext
-from park.envs.circuit_sim.utility.learn import Box
 from park.envs.circuit_sim.utility.logging import get_default_logger
+from park.spaces import Box
 
 __all__ = ['Circuit', 'Evaluator', 'export_circuit', 'exported_circuits', 'make_circuit']
 
@@ -86,7 +86,7 @@ class Circuit(object, metaclass=abc.ABCMeta):
 
     @property
     def in_space(self):
-        return Box(len(self.parameters))
+        return Box(shape=len(self.parameters))
 
 
 class Evaluator(object):
@@ -149,7 +149,7 @@ class Evaluator(object):
 
     @property
     def in_space(self):
-        space = Box.from_bound(self.bound)
+        space = Box(low=self.lower_bound, high=self.upper_bound)
         assert space.shape == self._circuit.in_space.shape
         return space
 
