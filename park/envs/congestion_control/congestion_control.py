@@ -15,7 +15,12 @@ from park.param import config
 from park.utils import seeding
 from park.spaces.box import Box
 
-import capnp
+try:
+    import capnp
+except:
+    sh.run("pip3 install --user pycapnp", shell=True)
+    import capnp
+
 capnp.remove_import_hook()
 ccp_capnp = capnp.load(park.__path__[0]+"/envs/congestion_control/park/ccp.capnp")
 
@@ -30,6 +35,7 @@ class CcpRlAgentImpl(ccp_capnp.RLAgent.Server):
         delta = 0.5
         tput = obs.rout
         delay = obs.rtt - self.min_rtt
+        delay = delay if delay > 0 else 0
 
         logtput = math.log2(tput) if tput > 0 else 0
         logdelay = math.log2(delay) if delay > 0 else 0
@@ -105,7 +111,7 @@ class CongestionControlEnv(core.SysEnv):
             raise OSError('Please run as non-root')
 
         logger.info("Install Dependencies")
-        sh.run("sudo apt install -y git build-essential autoconf automake capnproto", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
+        sh.run("sudo apt install -y git build-essential autoconf automake capnproto iperf", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
         sh.run("sudo add-apt-repository -y ppa:keithw/mahimahi", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
         sh.run("sudo apt-get -y update", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
         sh.run("sudo apt-get -y install mahimahi", stdout=sh.PIPE, stderr=sh.PIPE, shell=True)
@@ -260,6 +266,6 @@ class CongestionControlEnv(core.SysEnv):
             sh.check_call("cargo build --release", cwd=cong_env_path + "/park", shell=True)
         except sh.CalledProcessError:
             logger.info("Installing rust")
-            sh.check_call("bash rust-install.sh", cwd=cong_env_path, shell=True)
+            sh.check_call("sudo bash rust-install.sh", cwd=cong_env_path, shell=True)
             logger.info("Building ccp shim")
             sh.check_call("~/.cargo/bin/cargo build --release", cwd=cong_env_path + "/park", shell=True)
