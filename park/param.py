@@ -81,11 +81,11 @@ parser.add_argument('--qopt_dataset', type=str, required=False,
                             default='JOB', help='')
 
 # -- Cache --
-parser.add_argument('--cache_trace', type=str, required=False, default='test', 
+parser.add_argument('--cache_trace', type=str, required=False, default='test',
                     help='trace selection')
-parser.add_argument('--cache_replace_policy', type=str, required=False, default='size', 
+parser.add_argument('--cache_replace_policy', type=str, required=False, default='size',
                     help='cache replacement policy')
-parser.add_argument('--cache_size', type=int, required=False, default=1024, 
+parser.add_argument('--cache_size', type=int, required=False, default=1024,
                     help='cache size')
 
 # -- Simple Queue --
@@ -107,5 +107,11 @@ parser.add_argument('--pl_graph', type=str, default='inception',
                     help='The tensorflow graph to place')
 parser.add_argument('--pl_n_devs', type=int, default=2,
                     help='Number of devices to split the graph across')
+
+# -- Congestion Control --
+parser.add_argument('--cc_delay', type=int, default=25, help='Link delay to run experiment with')
+parser.add_argument('--cc_uplink_trace', type=str, default="const48.mahi", help='Uplink trace to use')
+parser.add_argument('--cc_downlink_trace', type=str, default="const48.mahi", help='Uplink trace to use')
+parser.add_argument('--cc_duration', type=int, default=120, help='How long of an experiment to run')
 
 config, _ = parser.parse_known_args()
