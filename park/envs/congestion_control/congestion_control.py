@@ -68,7 +68,11 @@ class CcpRlAgentImpl(ccp_capnp.RLAgent.Server):
         else:
             reward, info = (0, (0, 0, 0))
 
-        act = self.agent.get_action(obs, reward, False, info)
+        try:
+            act = self.agent.get_action(obs, reward, False, info)
+        except Exception as e:
+            print("RL Agent failed within get_action: " + str(e))
+
         self.old_obs = observation
 
         c, r = act
