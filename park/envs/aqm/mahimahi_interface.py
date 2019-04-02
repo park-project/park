@@ -34,8 +34,8 @@ class MahimahiInterface():
 		self.action_delay = 0
 		self.action_ts = 0
 
-		Popen("mkfifo mahimahi_pipe1", shell=True).wait()
-		Popen("mkfifo mahimahi_pipe2", shell=True).wait()
+		#Popen("mkfifo mahimahi_pipe1", shell=True).wait()
+		#Popen("mkfifo mahimahi_pipe2", shell=True).wait()
 
 		
 
