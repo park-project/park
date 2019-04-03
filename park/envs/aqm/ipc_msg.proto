@@ -6,7 +6,7 @@
 // auto-generate code for Python:
 // protoc -I=./ --python_out=./ ./ipc_msg.proto
 
-syntax = "proto2";
+syntax = "proto3";
 
 package rl;
 
@@ -15,22 +15,22 @@ message IPCMessage {
 
     // message
     // ('get_prob')
-    optional string msg = 1;
+    string msg = 1;
 
     // number of enqueued packets counter
-    optional uint64 eqc = 2;
+    uint64 eqc = 2;
 
     // number of dequeued packets counter
-    optional uint64 dqc = 3;
+    uint64 dqc = 3;
 
     // number of enqueued bytes counter
-    optional uint64 eqb = 4;
+    uint64 eqb = 4;
 
     // queue delay
-    optional uint64 qdelay = 5;
+    uint64 qdelay = 5;
 
     // current drop probability
-    optional float current_prob = 6;
+    float current_prob = 6;
 
 }
 
@@ -39,9 +39,9 @@ message IPCReply {
 
     // message
     // ('set_prob')
-    optional string msg = 1;
+    string msg = 1;
 
     // next drop rate
-    optional float prob = 2;
+    float prob = 2;
 
 }

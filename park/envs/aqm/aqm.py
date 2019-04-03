@@ -26,19 +26,31 @@ class AQMEnv(core.Env):
         
         # Setup Mahimahi
 
-        # TODO: check os
+        # TODO: sudo apt-get install apache2-dev
+        # sudo apt-get install libssl-dev
+        # sudo apt-get install libxcb-xrm-dev 
+        # libxcb-present-dev
+        # libcairo2-dev
+        # libpango1.0-dev
+        # sudo apt-get install libzmq3-dev
 
+        # TODO: check os
         mahimahi_path = park.__path__[0]+"/envs/aqm/mahimahi"
 
         if os.path.exists (mahimahi_path) == False :
             # create folder 
             Popen("mkdir %s" % mahimahi_path, shell=True).wait()
             # get mahimahi
-            Popen("cd %s; git clone https://github.com/songtaohe/mahimahi.git" % (park.__path__[0]+"/envs/aqm/"), shell=True).wait()
-
+            # Popen("cd %s; git clone https://github.com/songtaohe/mahimahi.git" % (park.__path__[0]+"/envs/aqm/"), shell=True).wait()
+            Popen("cd %s; git clone https://github.com/mehrdadkhani/mahimahi-1 mahimahi" % (park.__path__[0]+"/envs/aqm/"), shell=True).wait()
             # Make mahimahi
+            # Popen("cd %s; git fetch; git checkout mahimahi_stable2; ./autogen.sh; ./configure; make; sudo make install" % mahimahi_path, shell=True).wait()
             Popen("cd %s; git fetch; git checkout mahimahi_stable2; ./autogen.sh; ./configure; make; sudo make install" % mahimahi_path, shell=True).wait()
 
+        # compile protoc
+        # protoc -I=./park/envs/aqm/ --cpp_out=./park/envs/aqm/mahimahi/src/packet ./park/envs/aqm/ipc_msg.proto
+
+        # TODO: disable pie
 
         #self.mm_delay = mahimahi_path + "/src/frontend/mm-delay"
         #self.mm_link = mahimahi_path + "/src/frontend/mm-link"
@@ -220,12 +232,12 @@ class AQMEnv(core.Env):
         self.reset() 
         
         while True:
-            #print('inside')
+            # print('inside')
             msg = socket.recv()
             ipc_msg.ParseFromString(msg)
-            #print('got message', ipc_msg.msg)
+            # print('got message', ipc_msg.msg)
             if ipc_msg.msg == 'get_prob':
-                ipc_reply.prob = 1.0#agent(ipc_msg.state) 
+                ipc_reply.prob = 0#agent(ipc_msg.state) 
                 ipc_reply.msg = 'set_prob'            
                 socket.send(ipc_reply.SerializeToString(),0)
 
