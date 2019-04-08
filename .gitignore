@@ -6,3 +6,5 @@ traces/
 *.tr
 *.zip
 ._*
+*.gz
+*~
