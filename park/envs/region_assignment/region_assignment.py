@@ -51,7 +51,9 @@ class RegionAssignmentEnv(core.Env):
         self.seed(config.seed)
 
         self.__data = list(load_data())  # copy
-        self.np_random.shuffle(self.__data)
+
+        if config.ra_shuffle:
+            self.np_random.shuffle(self.__data)
 
         self.__current_account_idx = 0
 

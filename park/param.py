@@ -114,4 +114,7 @@ parser.add_argument('--cc_uplink_trace', type=str, default="const48.mahi", help=
 parser.add_argument('--cc_downlink_trace', type=str, default="const48.mahi", help='Uplink trace to use')
 parser.add_argument('--cc_duration', type=int, default=120, help='How long of an experiment to run')
 
+# -- Region Assignment
+parser.add_argument('--ra_shuffle', type=bool, default=True, help="Whether or not to shuffle the order that pages are assigned, or to use the creation order.")
+
 config, _ = parser.parse_known_args()
