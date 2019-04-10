@@ -36,7 +36,7 @@ class PowerSet(core.Space):
         space. If it is a set, then just check if that is a part of the space
         '''
         if isinstance(x, set):
-            return x.isubset(self.set)
+            return x.issubset(self.set)
         elif isinstance(x, np.ndarray):
             for xi in x:
                 if not xi.issubset(self.set):
