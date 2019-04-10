@@ -176,9 +176,8 @@ class CongestionControlEnv(core.SysEnv):
 
         logger.info("Done with init")
 
-    def run(self, agent_constructor, agent_parameters):
-        agent = agent_constructor(self.observation_space, self.action_space, *agent_parameters)
-        logger.info("Setting new agent")
+    def run(self, agent):
+        logger.info("Setup agent")
         global global_agent
         global_agent.set_agent(agent)
 
