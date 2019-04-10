@@ -48,11 +48,9 @@ try:
 	os.system('rm -r ' + chrome_user_dir)
 	os.system('cp -r ' + default_chrome_user_dir + ' ' + chrome_user_dir)
 	
-	# start abr algorithm server
-	command = 'exec /usr/bin/python3 park/envs/abr/rl_server.py ' + \
-	          curr_path + ' ' + agent_class_path
-	
-	proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+	# set up proxy
+	subprocess.run('mkfifo /tmp/park_abr_proxy', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+	run_proxy = subprocess.Popen('nc -lkv 8333 </tmp/park_abr_proxy | nc -Uv /tmp/abr_http_socket >/tmp/park_abr_proxy', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 	sleep(2)
 	
 	# to not display the page in browser
@@ -81,8 +79,8 @@ try:
 	display.stop()
 	
 	# kill abr algorithm server
-	proc.send_signal(signal.SIGINT)
-	# proc.kill()
+	run_proxy.send_signal(signal.SIGINT)
+	# run_proxy.kill()
 	
 	print('done')
 	
