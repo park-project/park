@@ -7,6 +7,9 @@ Vagrant.configure("2") do |config|
   config.vm.post_up_message = ""\
     "Welcome to CCP. "\
     "Run `make` in /ccp to compile. This may take some time. "
-  config.vm.synced_folder ".", "/park"
+  config.vm.synced_folder ".", "/park",
+    id: "park"
+  config.vm.synced_folder "../park_agents", "/park_agents",
+    id: "park_agents"
   config.vm.provision "shell", path: "./park/envs/congestion_control/ccp-system-setup.sh"
 end
