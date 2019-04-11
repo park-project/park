@@ -53,6 +53,8 @@ class ABRSimEnv(core.Env):
     def __init__(self):
         # observation and action space
         self.setup_space()
+        # set up seed
+        self.seed(config.seed)
         # load all trace files
         self.all_traces = load_traces()
         # load all video chunk sizes
