@@ -24,6 +24,11 @@ register(
 )
 
 register(
+    env_id='congestion_control',
+    entry_point='park.envs.congestion_control:CongestionControlEnv',
+)
+
+register(
     env_id='spark',
     entry_point='park.envs.spark:SparkEnv',
 )
@@ -61,4 +66,9 @@ register(
 register(
     env_id='tf_placement_sim',
     entry_point='park.envs.tf_placement_sim:TFPlacementSimEnv'
+)
+
+register(
+    env_id='region_assignment',
+    entry_point='park.envs.region_assignment:RegionAssignmentEnv'
 )
