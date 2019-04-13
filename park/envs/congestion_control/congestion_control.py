@@ -13,6 +13,7 @@ import park
 from park import core, spaces, logger
 from park.param import config
 from park.utils import seeding
+from park.utils.colorful_print import print_red
 from park.spaces.box import Box
 
 try:
@@ -71,7 +72,7 @@ class CcpRlAgentImpl(ccp_capnp.RLAgent.Server):
         try:
             act = self.agent.get_action(obs, reward, False, info)
         except Exception as e:
-            print("RL Agent failed within get_action: " + str(e))
+            print_red("RL Agent failed within get_action: " + str(e))
 
         self.old_obs = observation
 
