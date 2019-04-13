@@ -275,9 +275,14 @@ class ABREnv(core.SysEnv):
         if not os.path.exists('/var/www/html/Manifest.mpd'):
             os.system('python ' + park.__path__[0] + '/envs/abr/setup.py')
 
-        if not os.path.exists(park.__path__[0] + "local-unix-proxy/target/release/unixskproxy"):
+        if not os.path.exists(park.__path__[0] + "/envs/abr/local-unix-proxy/target/release/unixskproxy"):
             subprocess.run("git submodule update --init --recursive", shell=True)
-            subprocess.run("cd {} && cargo build --release".format(park.__path__[0] + "/envs/abr/local-unix-proxy/"),
+            try:
+                subprocess.check_call("cd {} && cargo build --release".format(park.__path__[0] + "/envs/abr/local-unix-proxy/"),
+                    shell=True)
+            except subprocess.CalledProcessError:
+                subprocess.check_call("sudo bash {}".format(park.__path__[0] + "/envs/congestion_control/rust-install.sh"), cwd=park.__path__[0] + "/envs/abr", shell=True)
+                subprocess.run("cd {} && ~/.cargo/bin/cargo build --release".format(park.__path__[0] + "/envs/abr/local-unix-proxy/"),
                     shell=True)
 
         # observation and action space
