@@ -25,7 +25,8 @@ env = park.make('congestion_control')
 
 # the run script will start the real system
 # and periodically invoke agent.get_action
-env.run(agent_impl.Agent, agent_parameters)
+agent = Agent(env.observation_space, env.action_space)
+env.run(agent)
 ```
 
 The `agent_impl.py` should implement
