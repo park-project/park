@@ -24,16 +24,15 @@ from time import sleep
 def timeout_handler(signum, frame):
 	raise Exception("Timeout")
 
-ip = sys.argv[1]
-run_time = int(sys.argv[2])
-process_id = sys.argv[3]
-sleep_time = sys.argv[4]
+run_time = int(sys.argv[1])
+process_id = sys.argv[2]
+sleep_time = sys.argv[3]
 	
 # prevent multiple process from being synchronized
 sleep(int(sleep_time))
 	
-# generate url
-url = 'http://' + ip + '/' + 'myindex_RL.html'
+# generate url  (Akshay: use mahimahi base)
+url = 'http://100.64.0.1/' + 'myindex_RL.html'
 
 # timeout signal
 signal.signal(signal.SIGALRM, timeout_handler)
@@ -48,8 +47,8 @@ try:
 	os.system('cp -r ' + default_chrome_user_dir + ' ' + chrome_user_dir)
 	
 	# set up proxy
-	subprocess.run('mkfifo /tmp/park_abr_proxy', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-	run_proxy = subprocess.Popen('nc -lkv 8333 </tmp/park_abr_proxy | nc -Uv /tmp/abr_http_socket >/tmp/park_abr_proxy', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+	run_proxy = subprocess.Popen(abr_path + '/unixskproxy -p 8333 -u /tmp/abr_http_socket',
+		shell=True)
 	sleep(2)
 	
 	# to not display the page in browser

@@ -188,7 +188,7 @@ def make_request_handler(input_dict):
             self.send_header('Cache-Control', 'max-age=3000')
             self.send_header('Content-Length', 20)
             self.end_headers()
-            self.wfile.write("console.log('here');")
+            self.wfile.write("console.log('here');".encode())
 
         def log_message(self, format, *args):
             return
@@ -308,8 +308,9 @@ class ABREnv(core.SysEnv):
 
         trace_file = self.np_random.choice(self.all_traces)
 
-        ip_data = json.loads(urlopen("http://ip.jsontest.com/").read().decode('utf-8'))
-        ip = str(ip_data['ip'])
+        # Akshay: use mahimahi base ip instead
+        # ip_data = json.loads(urlopen("http://ip.jsontest.com/").read().decode('utf-8'))
+        # ip = str(ip_data['ip'])
 
         # set up agent in the abr server
         input_dict = {'agent': agent,
@@ -336,7 +337,7 @@ class ABREnv(core.SysEnv):
             ' mm-link ' + park.__path__[0] + '/envs/abr/12mbps ' +
             park.__path__[0] + '/envs/abr/cooked_traces/' + trace_file +
             ' /usr/bin/python3 ' + park.__path__[0] + '/envs/abr/run_video.py ' +
-            ip + ' ' + '320' + ' ' + '0' + ' ' + '1',
+            '320' + ' ' + '0' + ' ' + '1',
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
             shell=True)
 
