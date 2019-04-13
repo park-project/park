@@ -27,17 +27,17 @@ def timeout_handler(signum, frame):
 run_time = int(sys.argv[1])
 process_id = sys.argv[2]
 sleep_time = sys.argv[3]
-	
+
 # prevent multiple process from being synchronized
 sleep(int(sleep_time))
-	
+
 # generate url  (Akshay: use mahimahi base)
-url = 'http://100.64.0.1/' + 'myindex_RL.html'
+url = 'http://{}/'.format(os.environ["MAHIMAHI_BASE"]) + 'myindex_RL.html'
 
 # timeout signal
 signal.signal(signal.SIGALRM, timeout_handler)
 signal.alarm(run_time + 30)
-	
+
 try:
 	# copy over the chrome user dir
 	abr_path = os.path.dirname(os.path.realpath(__file__))
@@ -45,16 +45,16 @@ try:
 	chrome_user_dir = '/tmp/chrome_user_dir_id_' + process_id
 	os.system('rm -r ' + chrome_user_dir)
 	os.system('cp -r ' + default_chrome_user_dir + ' ' + chrome_user_dir)
-	
+
 	# set up proxy
-	run_proxy = subprocess.Popen(abr_path + '/unixskproxy -p 8333 -u /tmp/abr_http_socket',
+	run_proxy = subprocess.Popen(os.path.join(abr_path, 'local-unix-proxy/target/release/unixskproxy -p 8333 -u /tmp/abr_http_socket'),
 		shell=True)
 	sleep(2)
-	
+
 	# to not display the page in browser
 	display = Display(visible=0, size=(800,600))
 	display.start()
-	
+
 	# initialize chrome driver
 	options=Options()
 	chrome_driver = abr_path + '/abr_browser_dir/chromedriver'
@@ -66,20 +66,20 @@ try:
 	# run chrome
 	driver.set_page_load_timeout(10)
 	driver.get(url)
-	
+
 	sleep(run_time)
-	
+
 	driver.quit()
 	display.stop()
-	
+
 	# kill abr algorithm server
 	run_proxy.send_signal(signal.SIGINT)
 	# run_proxy.kill()
-	
+
 	print('done')
-	
+
 except Exception as e:
-	try: 
+	try:
 		display.stop()
 	except:
 		pass
@@ -91,6 +91,6 @@ except Exception as e:
 		proc.send_signal(signal.SIGINT)
 	except:
 		pass
-	
+
 	print(e)
 

@@ -115,7 +115,7 @@ def make_request_handler(input_dict):
                                                   self.input_dict['last_bit_rate']) / M_IN_K
 
                 # --log reward--
-                # log_bit_rate = np.log(VIDEO_BIT_RATE[post_data['lastquality']] / float(VIDEO_BIT_RATE[0]))   
+                # log_bit_rate = np.log(VIDEO_BIT_RATE[post_data['lastquality']] / float(VIDEO_BIT_RATE[0]))
                 # log_last_bit_rate = np.log(self.input_dict['last_bit_rate'] / float(VIDEO_BIT_RATE[0]))
 
                 # reward = log_bit_rate \
@@ -222,7 +222,7 @@ class ABREnv(core.SysEnv):
         b_{t} - 4.3 * s_{t} - |b_t - b_{t-1}|
         Note: there are different definitions of combining multiple objectives in the reward,
         check Section 5.1 of the first reference below.
-    
+
     * REFERENCE *
         Section 4.2, Section 5.1
         Neural Adaptive Video Streaming with Pensieve
@@ -233,9 +233,9 @@ class ABREnv(core.SysEnv):
         Variance Reduction for Reinforcement Learning in Input-Driven Environments.
         H Mao, SB Venkatakrishnan, M Schwarzkopf, M Alizadeh.
         https://openreview.net/forum?id=Hyg1G2AqtQ
-    
+
         A Control-Theoretic Approach for Dynamic Adaptive Video Streaming over HTTP
-        X Yin, A Jindal, V Sekar, B Sinopoli 
+        X Yin, A Jindal, V Sekar, B Sinopoli
         https://dl.acm.org/citation.cfm?id=2787486
     """
     def __init__(self):
@@ -274,6 +274,11 @@ class ABREnv(core.SysEnv):
         # check if the manifest file is copied to the right place (last step in setup.py)
         if not os.path.exists('/var/www/html/Manifest.mpd'):
             os.system('python ' + park.__path__[0] + '/envs/abr/setup.py')
+
+        if not os.path.exists(park.__path__[0] + "local-unix-proxy/target/release/unixskproxy"):
+            subprocess.run("git submodule update --init --recursive", shell=True)
+            subprocess.run("cd {} && cargo build --release".format(park.__path__[0] + "/envs/abr/local-unix-proxy/"),
+                    shell=True)
 
         # observation and action space
         self.setup_space()
@@ -338,7 +343,7 @@ class ABREnv(core.SysEnv):
             park.__path__[0] + '/envs/abr/cooked_traces/' + trace_file +
             ' /usr/bin/python3 ' + park.__path__[0] + '/envs/abr/run_video.py ' +
             '320' + ' ' + '0' + ' ' + '1',
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             shell=True)
 
         p.wait()
