@@ -12,6 +12,7 @@ import socket
 import string
 import zipfile
 import subprocess
+import threading
 import numpy as np
 from sys import platform
 from urllib.request import urlopen
@@ -63,10 +64,18 @@ def get_chunk_size(quality, index):
 class UnixHTTPServer(HTTPServer):
     address_family = socket.AF_UNIX
 
+    def __init__(self, *args, **kwargs):
+        HTTPServer.__init__(self, *args, **kwargs)
+        self.stop = False
+
     def server_bind(self):
         UnixStreamServer.server_bind(self)
         self.server_name = "unix_socket_server"
         self.server_port = 0
+
+    def serve_forever(self):
+        while not self.stop:
+            self.handle_request()
 
 
 def make_request_handler(input_dict):
@@ -308,20 +317,29 @@ class ABREnv(core.SysEnv):
                   'last_total_rebuf': 0,
                   'video_chunk_count': 0}
 
+        # remove socket binding
+        socket_path = '/tmp/abr_http_socket'
+        os.system('rm ' + socket_path)
         # interface to abr_rl server
         handler_class = make_request_handler(input_dict=input_dict)
-        server = UnixHTTPServer("/tmp/abr_http_socket", handler_class)
+        server = UnixHTTPServer(socket_path, handler_class)
         print('Unix socket server starts listening')
-        server.serve_forever()
+
+        def run_server_forever(server):
+            server.serve_forever()
+
+        t = threading.Thread(target=run_server_forever, args=(server,))
+        t.start()
 
         # start real ABR environment
         p = subprocess.Popen('mm-delay 40' +
             ' mm-link ' + park.__path__[0] + '/envs/abr/12mbps ' +
             park.__path__[0] + '/envs/abr/cooked_traces/' + trace_file +
-            ' /usr/bin/python ' + park.__path__[0] + '/envs/abr/run_video.py ' +
-            ip + ' ' + '320' + ' ' + '0' + ' ' + '1' + ' ' +
-            curr_path + ' ' + agent_file_name,
+            ' /usr/bin/python3 ' + park.__path__[0] + '/envs/abr/run_video.py ' +
+            ip + ' ' + '320' + ' ' + '0' + ' ' + '1',
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
             shell=True)
 
         p.wait()
+        server.stop = True
+        print('Socket server shutdown')
