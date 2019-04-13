@@ -255,7 +255,7 @@ class ABREnv(core.SysEnv):
         # check/download the browser files
         if not os.path.exists(park.__path__[0] + '/envs/abr/abr_browser_dir/'):
             wget.download(
-                'https://www.dropbox.com/s/a3vadqokeg3x60l/abr_browser_dir.zip?dl=1',
+                'https://www.dropbox.com/s/oa0v6s886epkn28/abr_browser_dir.zip?dl=1',
                 out=park.__path__[0] + '/envs/abr/')
             with zipfile.ZipFile(
                  park.__path__[0] + '/envs/abr/abr_browser_dir.zip', 'r') as zip_f:
