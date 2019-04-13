@@ -143,7 +143,7 @@ class CongestionControlEnv(core.SysEnv):
         # rtt                UInt64; [0ms, 300ms]
         # rin                UInt64; [0 Byte/s, 1GByte/s]
         # rout               UInt64; [0 Byte/s, 1GByte/s]
-        self.state_space = Box(
+        self.observation_space = Box(
             low=np.array([0] * 14),
             high=np.array([1.8e6, 1.8e6, 1.8e6, 1200, 1200, 1200, 1200, 1, 1.8e6, 1200, 0, 300e3, 1e9, 1e9]),
         )
