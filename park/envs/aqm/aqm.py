@@ -16,8 +16,8 @@ from park.envs.aqm.mahimahi_interface import MahimahiInterface
 try:
     from park.envs.aqm.ipc_msg_pb2 import IPCMessage, IPCReply
 except:
-    os.system("protoc -I=./park/envs/aqm/ --python_out=./park/envs/aqm/ ./park/envs/aqm/ipc_msg.proto")
-    from park.envs.spark.ipc_msg_pb2 import IPCMessage, IPCReply
+    os.system("protoc -I=" + park.__path__[0] + "/envs/aqm/ --python_out=" + park.__path__[0] + "/envs/aqm/ " + park.__path__[0] + "/envs/aqm/ipc_msg.proto")
+    from park.envs.aqm.ipc_msg_pb2 import IPCMessage, IPCReply
 class AQMEnv(core.Env):
     """
     TODO: write a description
