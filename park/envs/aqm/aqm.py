@@ -231,15 +231,62 @@ class AQMEnv(core.Env):
         socket.bind("ipc:///tmp/aqm_cpp_python_ipc")
         self.reset() 
         
+        last_eqc = 0 
+        last_dqc = 0 
+        last_qdelay = 0 
+
+        eqc = 0 
+        dqc = 0 
+        qdelay = 0
+
+        reg = 0
+
         while True:
-            # print('inside')
+            #print('inside')
             msg = socket.recv()
             ipc_msg.ParseFromString(msg)
-            # print('got message', ipc_msg.msg)
+            #print('got message', ipc_msg.msg)
+
             if ipc_msg.msg == 'get_prob':
-                ipc_reply.prob = 0#agent(ipc_msg.state) 
+                try:
+                    eqc = ipc_msg.eqc 
+                    dqc = ipc_msg.dqc 
+                    qdelay = ipc_msg.qdelay 
+                except:
+                    print("error reading ipc msg")
+
+                avg_queue_delay = (qdelay - last_qdelay)/float(dqc-last_dqc + 0.01)
+                eq_counter = eqc - last_eqc 
+                dq_counter = dqc - last_dqc 
+
+                last_qdelay = qdelay
+                last_eqc = eqc 
+                last_dqc = dqc 
+
+                #print(avg_queue_delay, eq_counter, dq_counter)
+
+                reward = -abs(avg_queue_delay-20) + reg 
+
+                prob = 0.2*agent.get_action(np.array([avg_queue_delay, eq_counter, dq_counter]), reward)
+
+                prob = prob[0][0]
+                #print(prob)
+
+                if prob > 0.5 :
+                    reg = -10.0 * (prob-0.5)
+
+                if prob < 0.0:
+                    reg = -10.0 * (0.0-prob)
+
+                
+
+
+
+                ipc_reply.prob = prob#agent(ipc_msg.state) 
                 ipc_reply.msg = 'set_prob'            
                 socket.send(ipc_reply.SerializeToString(),0)
+
+                sleep(0.1)
 
     def seed(self, seed=None):
         # no controllable randomness
