@@ -18,6 +18,7 @@ os.system("sudo apt-get -y install python-setuptools python-pip xvfb xserver-xep
 os.system("tar xvzf selenium-2.39.0.tar.gz")
 selenium_dir = start_dir + "/park/envs/abr/selenium-2.39.0"
 os.chdir( selenium_dir )
+os.system("pip3 install --user selenium")
 os.system("sudo python setup.py install" )
 os.system("sudo sh -c \"echo 'DBUS_SESSION_BUS_ADDRESS=/dev/null' > /etc/init.d/selenium\"")
 

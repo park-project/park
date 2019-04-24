@@ -65,6 +65,8 @@ class SwitchEnv(core.Env):
         # generate initial traffic
         self.queue_occupancy = self.sample_from_bistochastic_matrix()
 
+        return self.queue_occupancy
+
     def sample_from_bistochastic_matrix(self):
         incoming_traffic = self.np_random.binomial(1, config.ss_load * self.bistochastic_mat)
         return incoming_traffic

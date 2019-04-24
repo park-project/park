@@ -34,7 +34,7 @@ class ABRSimEnv(core.Env):
         b_{t} - 4.3 * s_{t} - |b_t - b_{t-1}|
         Note: there are different definitions of combining multiple objectives in the reward,
         check Section 5.1 of the first reference below.
-    
+
     * REFERENCE *
         Section 4.2, Section 5.1
         Neural Adaptive Video Streaming with Pensieve
@@ -45,14 +45,16 @@ class ABRSimEnv(core.Env):
         Variance Reduction for Reinforcement Learning in Input-Driven Environments.
         H Mao, SB Venkatakrishnan, M Schwarzkopf, M Alizadeh.
         https://openreview.net/forum?id=Hyg1G2AqtQ
-    
+
         A Control-Theoretic Approach for Dynamic Adaptive Video Streaming over HTTP
-        X Yin, A Jindal, V Sekar, B Sinopoli 
+        X Yin, A Jindal, V Sekar, B Sinopoli
         https://dl.acm.org/citation.cfm?id=2787486
     """
     def __init__(self):
         # observation and action space
         self.setup_space()
+        # set up seed
+        self.seed(config.seed)
         # load all trace files
         self.all_traces = load_traces()
         # load all video chunk sizes
@@ -105,7 +107,7 @@ class ABRSimEnv(core.Env):
 
     def reset(self):
         self.trace, self.curr_t_idx = \
-            sample_trace(self.all_traces)
+            sample_trace(self.all_traces, self.np_random)
         self.chunk_time_left = get_chunk_time(
             self.trace, self.curr_t_idx)
         self.chunk_idx = 0
@@ -145,7 +147,7 @@ class ABRSimEnv(core.Env):
         # compute chunk download time based on trace
         delay = 0  # in seconds
 
-        # keep experiencing the network trace 
+        # keep experiencing the network trace
         # until the chunk is downloaded
         while chunk_size > 1e-8:  # floating number business
 
@@ -158,7 +160,7 @@ class ABRSimEnv(core.Env):
             delay += chunk_time_used
 
             if self.chunk_time_left == 0:
-                
+
                 self.curr_t_idx += 1
                 if self.curr_t_idx == len(self.trace[1]):
                     self.curr_t_idx = 0
@@ -182,7 +184,7 @@ class ABRSimEnv(core.Env):
             bitrate_change = np.abs(self.bitrate_map[action] - \
                              self.bitrate_map[self.past_action])
 
-        # linear reward 
+        # linear reward
         # (https://dl.acm.org/citation.cfm?id=3098843 section 5.1, QoE metrics (1))
         reward = self.bitrate_map[action] - 4.3 * rebuffer_time - bitrate_change
 

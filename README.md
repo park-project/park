@@ -25,7 +25,8 @@ env = park.make('congestion_control')
 
 # the run script will start the real system
 # and periodically invoke agent.get_action
-env.run(agent_impl.Agent, agent_parameters)
+agent = Agent(env.observation_space, env.action_space)
+env.run(agent)
 ```
 
 The `agent_impl.py` should implement
@@ -45,6 +46,6 @@ Note: to use `argparse` that is compatiable with park parameters, add parameters
 ```
 from park.param import parser
 parser.add_argument('--new_parameter')
-config, _ = parser.parse_known_args()
+config = parser.parse_args()
 print(config.new_parameter)
 ```

@@ -24,48 +24,40 @@ from time import sleep
 def timeout_handler(signum, frame):
 	raise Exception("Timeout")
 
-ip = sys.argv[1]
-run_time = int(sys.argv[2])
-process_id = sys.argv[3]
-sleep_time = sys.argv[4]
-curr_path = sys.argv[5]
-agent_class_path = sys.argv[6]
-	
+run_time = int(sys.argv[1])
+process_id = sys.argv[2]
+sleep_time = sys.argv[3]
+
 # prevent multiple process from being synchronized
 sleep(int(sleep_time))
-	
-# generate url
-url = 'http://' + ip + '/' + 'myindex_RL.html'
+
+# generate url  (Akshay: use mahimahi base)
+url = 'http://{}/'.format(os.environ["MAHIMAHI_BASE"]) + 'myindex_RL.html'
 
 # timeout signal
 signal.signal(signal.SIGALRM, timeout_handler)
 signal.alarm(run_time + 30)
-	
+
 try:
 	# copy over the chrome user dir
-	default_chrome_user_dir = 'park/envs/abr/abr_browser_dir/chrome_data_dir'
+	abr_path = os.path.dirname(os.path.realpath(__file__))
+	default_chrome_user_dir = abr_path + '/abr_browser_dir/chrome_data_dir'
 	chrome_user_dir = '/tmp/chrome_user_dir_id_' + process_id
 	os.system('rm -r ' + chrome_user_dir)
 	os.system('cp -r ' + default_chrome_user_dir + ' ' + chrome_user_dir)
-	
-	# start abr algorithm server
-	command = 'exec /usr/bin/python3 park/envs/abr/rl_server.py ' + \
-	          curr_path + ' ' + agent_class_path
-	
-	proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
+	# set up proxy
+	run_proxy = subprocess.Popen(os.path.join(abr_path, 'local-unix-proxy/target/release/unixskproxy -p 8333 -u /tmp/abr_http_socket'),
+		shell=True)
 	sleep(2)
-	
+
 	# to not display the page in browser
 	display = Display(visible=0, size=(800,600))
 	display.start()
 
-	# need the park directory
-	sys.path.append(curr_path)  # to load the agent module
-	
 	# initialize chrome driver
 	options=Options()
-	import park
-	chrome_driver = park.__path__[0] + '/envs/abr/abr_browser_dir/chromedriver'
+	chrome_driver = abr_path + '/abr_browser_dir/chromedriver'
 	options.add_argument('--user-data-dir=' + chrome_user_dir)
 	options.add_argument('--ignore-certificate-errors')
 	options.add_argument('--autoplay-policy=no-user-gesture-required')
@@ -74,20 +66,20 @@ try:
 	# run chrome
 	driver.set_page_load_timeout(10)
 	driver.get(url)
-	
+
 	sleep(run_time)
-	
+
 	driver.quit()
 	display.stop()
-	
+
 	# kill abr algorithm server
-	proc.send_signal(signal.SIGINT)
-	# proc.kill()
-	
+	run_proxy.send_signal(signal.SIGINT)
+	# run_proxy.kill()
+
 	print('done')
-	
+
 except Exception as e:
-	try: 
+	try:
 		display.stop()
 	except:
 		pass
@@ -99,6 +91,6 @@ except Exception as e:
 		proc.send_signal(signal.SIGINT)
 	except:
 		pass
-	
-	print e	
+
+	print(e)
 
