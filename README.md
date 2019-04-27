@@ -44,19 +44,19 @@ while not done:
 
 ### Contributors
 
-| Environment                     | Committers |
-| -------------                   | ------------- |
-| Adaptive video streaming        | Hongzi Mao, Akshay Narayan |
-| Spark cluster job scheduling    | Hongzi Mao, Malte Schwarzkopf |
-| SQL database query optimization | Parimarjan Negi |
-| Network congestion control      | Akshay Narayan, Frank Cangialosi |
-| Network active queue management | Mehrdad Khani, Songtao He |
-| Circuit design                  | Hanrui Wang, Kuan Wang, Jiacheng Yang |
-| Tensorflow device placement     | Ravichandra Addanki |
-| CDN memory caching              | Haonan Wang, Wei-Hung Weng |
-| Account region assignment       | Ryan Marcus |
-| Server load balancing           | Hongzi Mao |
-| Switch scheduling               | Ravichandra Addanki, Hongzi Mao |
+| Environment                     | env_id                            | Committers |
+| -------------                   | -------------                     | ------------- |
+| Adaptive video streaming        |abr, abr_sim                       | Hongzi Mao, Akshay Narayan |
+| Spark cluster job scheduling    |spark, spark_sim                   | Hongzi Mao, Malte Schwarzkopf |
+| SQL database query optimization |query_optimizer                    | Parimarjan Negi |
+| Network congestion control      |congestion_control                 | Akshay Narayan, Frank Cangialosi |
+| Network active queue management |aqm                                | Mehrdad Khani, Songtao He |
+| Circuit design                  |circuit_design | Hanrui Wang, Kuan Wang, Jiacheng Yang |
+| Tensorflow device placement     |tf_placement, tf_placement_sim     | Ravichandra Addanki |
+| CDN memory caching              |cache                              | Haonan Wang, Wei-Hung Weng |
+| Account region assignment       |region_assignment                  | Ryan Marcus |
+| Server load balancing           |load_balance                       | Hongzi Mao |
+| Switch scheduling               |switch_scheduling                  | Ravichandra Addanki, Hongzi Mao |
 
 ### Misc
 Note: to use `argparse` that is compatiable with park parameters, add parameters using
