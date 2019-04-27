@@ -69,6 +69,11 @@ register(
 )
 
 register(
+    env_id='circuit_three_stage_transimpedance',
+    entry_point='park.envs.circuit.entries:make_three_stage_transimpedance_amplifier_environment'
+)
+
+register(
     env_id='region_assignment',
     entry_point='park.envs.region_assignment:RegionAssignmentEnv'
 )
