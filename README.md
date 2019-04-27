@@ -1,20 +1,4 @@
 # Park
-A suite of system environments wrapped by OpenAI Gym interface.
-
-### Interface
-```
-import park
-
-env = park.make('load_balance')
-
-obs = env.reset()
-done = False
-
-while not done:
-    # act = agent.get_action(obs)
-    act = env.action_space.sample()
-    obs, reward, done, info = env.step(act)
-```
 
 ### Real system interface
 ```
@@ -40,6 +24,22 @@ class Agent(object):
         act = self.action_space.sample()
         # implement real action logic here
         return act
+```
+
+### Simulation interface
+Similar to OpenAI Gym interface.
+```
+import park
+
+env = park.make('load_balance')
+
+obs = env.reset()
+done = False
+
+while not done:
+    # act = agent.get_action(obs)
+    act = env.action_space.sample()
+    obs, reward, done, info = env.step(act)
 ```
 
 ### Contributors
