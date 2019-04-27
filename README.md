@@ -42,6 +42,23 @@ class Agent(object):
         return act
 ```
 
+### Contributors
+
+| Environment                     | Committers |
+| -------------                   | ------------- |
+| Adaptive video streaming        | Hongzi Mao, Akshay Narayan |
+| Spark cluster job scheduling    | Hongzi Mao, Malte Schwarzkopf |
+| SQL database query optimization | Parimarjan Negi |
+| Network congestion control      | Akshay Narayan, Frank Cangialosi |
+| Network active queue management | Mehrdad Khani, Songtao He |
+| Circuit design                  | Hanrui Wang, Kuan Wang, Jiacheng Yang |
+| Tensorflow device placement     | Ravichandra Addanki |
+| CDN memory caching              | Haonan Wang, Wei-Hung Weng |
+| Account region assignment       | Ryan Marcus |
+| Server load balancing           | Hongzi Mao |
+| Switch scheduling               | Ravichandra Addanki, Hongzi Mao |
+
+### Misc
 Note: to use `argparse` that is compatiable with park parameters, add parameters using
 ```
 from park.param import parser
