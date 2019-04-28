@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from park.envs.circuit_sim.utility.logging import StructuredFormatterBuilder
+from park.envs.circuit.simulator.utility.logging import StructuredFormatterBuilder
 
 __all__ = ['get_console_handler', 'get_logfile_handler', 'get_callback_handler']
 

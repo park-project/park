@@ -108,11 +108,18 @@ parser.add_argument('--pl_graph', type=str, default='inception',
 parser.add_argument('--pl_n_devs', type=int, default=2,
                     help='Number of devices to split the graph across')
 
-parser.add_argument('--circuit_remote_host', type=str, default=None)
-parser.add_argument('--circuit_remote_port', type=int, default=None)
-parser.add_argument('--circuit_tmp_path', type=str, default='./tmp')
-parser.add_argument('--circuit_env_type', type=str, default='pointed')
-parser.add_argument('--circuit_total_steps', type=int, default=5)
+# -- Circuit Simulator --
+parser.add_argument('--circuit_remote_host', type=str, default=None,
+                    help='The remote host of circuit simulation server (default: None)')
+parser.add_argument('--circuit_remote_port', type=int, default=None,
+                    help='The remote port of circuit simulation server (default: None)')
+parser.add_argument('--circuit_tmp_path', type=str, default='./tmp',
+                    help='The temporary path to the simulator (default: ./tmp)')
+parser.add_argument('--circuit_env_type', type=str, default='pointed',
+                    help='The circuit environment type (default: pointed)')
+parser.add_argument('--circuit_total_steps', type=int, default=5,
+                    help='The total steps of the environment (default: 5)')
+
 # -- Congestion Control --
 parser.add_argument('--cc_delay', type=int, default=25, help='Link delay to run experiment with')
 parser.add_argument('--cc_uplink_trace', type=str, default="const48.mahi", help='Uplink trace to use')

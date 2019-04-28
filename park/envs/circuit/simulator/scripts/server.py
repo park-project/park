@@ -2,10 +2,10 @@ import argparse
 import asyncio
 import inspect
 
-from park.envs.circuit_sim.circuit import exported_circuits, AsyncLocalContext
-from park.envs.circuit_sim.utility.comm import RobustServer
-from park.envs.circuit_sim.utility.io import loads_pickle, dumps_pickle
-from park.envs.circuit_sim.utility.logging import get_default_logger
+from park.envs.circuit.simulator.circuit import exported_circuits, AsyncLocalContext
+from park.envs.circuit.simulator.utility.comm import RobustServer
+from park.envs.circuit.simulator.utility.io import loads_pickle, dumps_pickle
+from park.envs.circuit.simulator.utility.logging import get_default_logger
 
 
 class Manager(object):

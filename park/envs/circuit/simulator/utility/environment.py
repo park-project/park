@@ -1,10 +1,10 @@
 from park.core import Env
-from park.envs.circuit_sim.circuit import Evaluator
-from park.envs.circuit_sim.utility.misc import flatten
+from park.envs.circuit.simulator.circuit import Evaluator
+from park.envs.circuit.simulator.utility.misc import flatten
 
 
 def l2dc_to_park_space(space):
-    from park.envs.circuit_sim.utility.learn.space import Box as L2DCBox,
+    from park.envs.circuit.simulator import Box as L2DCBox,
     from park.spaces import Box as ParkBox
     if isinstance(space, L2DCBox):
         return ParkBox(low=space.min_bound, high=space.max_bound, shape=space.shape, dtype=space.dtype)

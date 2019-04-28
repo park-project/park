@@ -1,6 +1,6 @@
 import numpy as np
 
-from park.envs.circuit_sim.utility.misc import AttrDict
+from park.envs.circuit.simulator.utility.misc import AttrDict
 
 __all__ = ['Rater']
 

@@ -1,6 +1,6 @@
 import functools
 
-from park.envs.circuit_sim.circuit.rater import Rater
+from park.envs.circuit.simulator.circuit import Rater
 
 rater = Rater(-5) \
     .metric('gain', scale='log', direction='maximize', constrained=True, targeted=False) \

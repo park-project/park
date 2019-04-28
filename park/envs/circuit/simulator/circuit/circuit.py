@@ -6,8 +6,8 @@ import traceback
 
 import numpy as np
 
-from park.envs.circuit_sim.circuit import Context, LocalContext
-from park.envs.circuit_sim.utility.logging import get_default_logger
+from park.envs.circuit.simulator.circuit import Context, LocalContext
+from park.envs.circuit.simulator.utility.logging import get_default_logger
 from park.spaces import Box
 
 __all__ = ['Circuit', 'Evaluator', 'export_circuit', 'exported_circuits', 'make_circuit']

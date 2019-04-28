@@ -2,7 +2,7 @@ import contextlib
 import copy
 import logging
 
-from park.envs.circuit_sim.utility.logging.formatter import _FormatBuilder
+from park.envs.circuit.simulator.utility.logging.formatter import _FormatBuilder
 
 __all__ = ['context_handler', 'context_formatter']
 

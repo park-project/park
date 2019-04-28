@@ -1,5 +1,5 @@
 from park.envs.circuit.environment import CircuitPointedEnv
-from park.envs.circuit_sim.circuit import ThreeStageTranimpedenceAmplifier, RemoteContext, LocalContext
+from park.envs.circuit.simulator.circuit import ThreeStageTranimpedenceAmplifier, RemoteContext, LocalContext
 from park.param import config
 
 
