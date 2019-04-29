@@ -1,8 +1,8 @@
 import numpy as np
 
 from park.core import Env
-from park.envs.circuit_sim.circuit import Evaluator
-from park.envs.circuit_sim.utility.misc import nested_select, ordered_flatten
+from park.envs.circuit.simulator.circuit import Evaluator
+from park.envs.circuit.simulator.utility.misc import nested_select, ordered_flatten
 from park.spaces import Tuple
 
 

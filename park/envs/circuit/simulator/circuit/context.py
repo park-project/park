@@ -3,11 +3,11 @@ import concurrent.futures
 import functools
 import os
 
-from park.envs.circuit_sim.utility.comm import RobustClient
-from park.envs.circuit_sim.utility.concurrency import make_pool
-from park.envs.circuit_sim.utility.io import open_tmp_path, loads_pickle, dumps_pickle
-from park.envs.circuit_sim.utility.logging import get_default_logger
-from park.envs.circuit_sim.utility.misc import AttrDict
+from park.envs.circuit.simulator.utility.comm import RobustClient
+from park.envs.circuit.simulator.utility.concurrency import make_pool
+from park.envs.circuit.simulator.utility.io import open_tmp_path, loads_pickle, dumps_pickle
+from park.envs.circuit.simulator.utility.logging import get_default_logger
+from park.envs.circuit.simulator.utility.misc import AttrDict
 
 __all__ = ['Context', 'RemoteContext', 'AsyncLocalContext', 'LocalContext']
 

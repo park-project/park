@@ -1,6 +1,6 @@
 import logging
 
-from park.envs.circuit_sim.utility.logging import StructuredFormatterBuilder, get_console_handler
+from park.envs.circuit.simulator.utility.logging import StructuredFormatterBuilder, get_console_handler
 
 __all__ = ['get_logger', 'get_default_logger']
 

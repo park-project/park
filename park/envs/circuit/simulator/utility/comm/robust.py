@@ -5,9 +5,9 @@ import functools
 import zmq
 import zmq.asyncio
 
-from park.envs.circuit_sim.utility.comm._base import socket_bind, _AbstractNode, socket_connect
-from park.envs.circuit_sim.utility.concurrency import make_pool, graceful_execute
-from park.envs.circuit_sim.utility.logging import get_default_logger
+from park.envs.circuit.simulator.utility.comm._base import socket_bind, _AbstractNode, socket_connect
+from park.envs.circuit.simulator.utility.concurrency import make_pool, graceful_execute
+from park.envs.circuit.simulator.utility.logging import get_default_logger
 
 __all__ = ['RobustServer', 'RobustClient']
 

@@ -3,9 +3,9 @@ import re
 
 import numpy as np
 
-from park.envs.circuit_sim.circuit import Circuit, export_circuit
-from park.envs.circuit_sim.utility.io import load_txt
-from park.envs.circuit_sim.utility.misc import AttrDict
+from park.envs.circuit.simulator.circuit import Circuit, export_circuit
+from park.envs.circuit.simulator.utility.io import load_txt
+from park.envs.circuit.simulator.utility.misc import AttrDict
 from park.spaces import Box
 
 __all__ = ['ThreeStageTranimpedenceAmplifier']
@@ -16,14 +16,14 @@ class ThreeStageTranimpedenceAmplifier(Circuit):
     @property
     def simdata(self):
         if not hasattr(self, '__cache_simdata__'):
-            data = load_txt('./park/envs/circuit_sim/library/transimpedance/three_stage.circuit')
+            data = load_txt('./park/envs/circuit/simulator/library/transimpedance/three_stage.circuit')
             setattr(self, '__cache_simdata__', data)
         return getattr(self, '__cache_simdata__')
 
     @property
     def libdata(self):
         if not hasattr(self, '__cache_libdata__'):
-            data = load_txt('./park/envs/circuit_sim/library/ee114.hspice')
+            data = load_txt('./park/envs/circuit/simulator/library/ee114.hspice')
             setattr(self, '__cache_libdata__', data)
         return getattr(self, '__cache_libdata__')
 
