@@ -51,7 +51,7 @@ while not done:
 | SQL database query optimization |query_optimizer                    | Parimarjan Negi |
 | Network congestion control      |congestion_control                 | Akshay Narayan, Frank Cangialosi |
 | Network active queue management |aqm                                | Mehrdad Khani, Songtao He |
-| Circuit design                  |circuit_design | Hanrui Wang, Kuan Wang, Jiacheng Yang |
+| Circuit design                  |circuit_design                     | Hanrui Wang, Jiacheng Yang |
 | Tensorflow device placement     |tf_placement, tf_placement_sim     | Ravichandra Addanki |
 | CDN memory caching              |cache                              | Haonan Wang, Wei-Hung Weng |
 | Account region assignment       |region_assignment                  | Ryan Marcus |
