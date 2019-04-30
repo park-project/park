@@ -57,19 +57,33 @@ parser.add_argument('--warmup_delay', type=int, default=1000,
                     help='Executor warming up delay (milliseconds) (default: 1000)')
 
 # -- Query Optimizer --
+parser.add_argument('--qopt_java_output', action="store_false",
+                    help="should the java servers output be visible")
+# TODO: need to add more control for this
+parser.add_argument('--qopt_viz', type=int, default=0,
+                    help="visualizations per episode")
+
+# parameters to be passed to the calcite backend
+parser.add_argument('--qopt_eval_runtime', type=int, default=0,
+                    help="execute query plan on db, to get runtimes, when evaluating")
+parser.add_argument('--qopt_train_runtime', type=int, default=0,
+                    help="train using runtimes from DB")
+
 parser.add_argument('--qopt_port', type=int, default=2654,
                     help="port for communicaton with calcite backend")
-## TODO: describe these better
 parser.add_argument('--qopt_query', type=int, default=0,
-                    help="query to run")
+                    help="index of the query to run")
 parser.add_argument('--qopt_train', type=int, default=1,
-                    help="0 or 1, to run in training mode or test mode")
-parser.add_argument('--qopt_only_final_reward', type=int,default=0, help="0 or 1")
+                    help="""0 or 1. To run in training mode or test mode. Check
+                    the calcite backend for more description of the two
+                    modes.""")
+parser.add_argument('--qopt_only_final_reward', type=int,default=0, 
+                    help="""0 or 1. If true, then only the final reward will be
+                    returned.""")
 parser.add_argument('--qopt_lopt', type=int,default=0, help="0 or 1")
 parser.add_argument('--qopt_exh', type=int,default=0, help="0 or 1")
 parser.add_argument('--qopt_verbose', type=int,default=0, help="0 or 1")
 parser.add_argument('--qopt_left_deep', type=int,default=0, help="0 or 1")
-parser.add_argument('--qopt_execute_on_db', type=int,default=0, help="0 or 1")
 parser.add_argument('--qopt_only_attr_features', type=int, required=False,
                             default=1, help='')
 
@@ -79,54 +93,22 @@ parser.add_argument('--qopt_cost_model', type=str, required=False,
                             default='rowCount', help='')
 parser.add_argument('--qopt_dataset', type=str, required=False,
                             default='JOB', help='')
+parser.add_argument('--qopt_clear_cache', type=int, required=False,
+                            default=0, help='')
+parser.add_argument('--qopt_recompute_fixed_planners', type=int, required=False,
+                            default=0, help='')
 
 # -- Cache --
-parser.add_argument('--cache_trace', type=str, required=False, default='test',
+parser.add_argument('--cache_trace', type=str, required=False, default='test', 
                     help='trace selection')
-parser.add_argument('--cache_replace_policy', type=str, required=False, default='size',
-                    help='cache replacement policy')
-parser.add_argument('--cache_size', type=int, required=False, default=1024,
-                    help='cache size')
+parser.add_argument('--cache_size', type=int, required=False, default=1024, 
+                    help='size of network cache')
 
 # -- Simple Queue --
 parser.add_argument('--sq_num_servers', type=float, default=5,
                     help='Number of server in simple queue environment (default: 5)')
-parser.add_argument('--sq_free_up_prob', type=float, default=0.1,
-                    help='Probability for a server to free up (default: 0.1)')
+parser.add_argument('--sq_free_up_prob', type=float, default=0.5,
+                    help='Probability for a server to free up (default: 0.5)')
 
-# -- Switch Scheduling --
-parser.add_argument('--ss_num_ports', type=int, default=3,
-                     help='Number of ports (same for input and output) (default: 3)')
-parser.add_argument('--ss_state_max_queue', type=int, default=50,
-                     help='Max queue size in state before clipping (default: 50)')
-parser.add_argument('--ss_load', type=float, default=0.9,
-                     help='Load of the system (default: 0.9)')
-
-# -- Device Placement for Tensorflow --
-parser.add_argument('--pl_graph', type=str, default='inception',
-                    help='The tensorflow graph to place')
-parser.add_argument('--pl_n_devs', type=int, default=2,
-                    help='Number of devices to split the graph across')
-
-# -- Circuit Simulator --
-parser.add_argument('--circuit_remote_host', type=str, default=None,
-                    help='The remote host of circuit simulation server (default: None)')
-parser.add_argument('--circuit_remote_port', type=int, default=None,
-                    help='The remote port of circuit simulation server (default: None)')
-parser.add_argument('--circuit_tmp_path', type=str, default='./tmp',
-                    help='The temporary path to the simulator (default: ./tmp)')
-parser.add_argument('--circuit_env_type', type=str, default='pointed',
-                    help='The circuit environment type (default: pointed)')
-parser.add_argument('--circuit_total_steps', type=int, default=5,
-                    help='The total steps of the environment (default: 5)')
-
-# -- Congestion Control --
-parser.add_argument('--cc_delay', type=int, default=25, help='Link delay to run experiment with')
-parser.add_argument('--cc_uplink_trace', type=str, default="const48.mahi", help='Uplink trace to use')
-parser.add_argument('--cc_downlink_trace', type=str, default="const48.mahi", help='Uplink trace to use')
-parser.add_argument('--cc_duration', type=int, default=120, help='How long of an experiment to run')
-
-# -- Region Assignment
-parser.add_argument('--ra_shuffle', type=bool, default=True, help="Whether or not to shuffle the order that pages are assigned, or to use the creation order.")
 
 config, _ = parser.parse_known_args()
