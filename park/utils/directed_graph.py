@@ -78,6 +78,12 @@ class DirectedGraph(object):
         adj_mat = nx.adjacency_matrix(self.graph)
         return node_features, edge_features, adj_mat, node_map, edge_map
 
+    def get_node_feature(self, node):
+        return self.graph.nodes[node]['feature']
+
+    def get_edge_feature(self, edge):
+        return self.graph[edge[0]][edge[1]]['feature']
+
     def get_neighbors(self, node):
         list_neighbors = [n for n in self.graph.neighbors(node)]
         return list_neighbors
