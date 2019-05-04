@@ -14,6 +14,8 @@ import networkx as nx
 import psutil
 import pdb
 import signal
+import glob
+from sklearn.model_selection import train_test_split
 
 def find_available_port(orig_port):
     conns = psutil.net_connections()
@@ -55,27 +57,16 @@ class QueryOptEnv(core.Env):
         # this will be updated every time we use _observe
         self._edge_pos_map = None
 
-        self.query_set = self._send("getCurQuerySet")
-        self.attr_count = int(self._send("getAttrCount"))
-
-        # FIXME: make this nicer?
-        # set dependent flags together:
-        # if config.qopt_runtime_reward:
-            # config.qopt_only_final_reward = 1
-            # config.qopt_reward_normalization = ""
-
-        # FIXME: these variable don't neccessarily belong here / should be
-        # cleaned up
-        # TODO: figure this out using the protocol too. Or set it on the java
-        # side using some protocol.
-        # self.only_final_reward = config.qopt_only_final_reward
-
         # will store _min_reward / _max_reward for each unique query
         # will map query: (_min_reward, _max_reward)
         self.reward_mapper = {}
         # these values will get updated in reset.
         self._min_reward = None
         self._max_reward = None
+
+        # self.query_set = self._send("getCurQuerySet")
+        self.attr_count = int(self._send("getAttrCount"))
+
         self.current_query = None
 
         # setup space with the new graph
@@ -89,6 +80,61 @@ class QueryOptEnv(core.Env):
             self.viz_ep = 0
             self.viz_output_dir = "./visualization/"
             self.viz_title_tmp = "query: {query}, ep: {ep}, step: {step}"
+
+        self.queries_initialized = False
+
+    def initialize_queries(self, queries, mode="train"):
+        '''
+        @queries: dict
+            key : query name
+            val: sql query
+        TODO: need to also provide the user option to specify the DB they want
+        to connect to along with the queries.
+        '''
+        self._send("setQueries")
+        self._send(mode)
+        self._send(json.dumps(queries))
+        self.queries_initialized = True
+
+    def _initialize_default_queries(self):
+        '''
+        loads the queries from the join order benchmark, and initializes them.
+        '''
+        self.base_dir = park.__path__[0]
+        # if JOB doesn't exist, download it
+        job_dir = self.base_dir + "/join-order-benchmark"
+        if os.path.exists(job_dir):
+            print("path exists")
+        else:
+            # now need to install the join-order-benchmark as well
+            JOB_REPO = "https://github.com/gregrahn/join-order-benchmark.git"
+            cmd = "git clone " + JOB_REPO
+            p = sp.Popen(cmd, shell=True, cwd=self.base_dir)
+            p.wait()
+            print("downloaded join order benchmark queries")
+
+        # read in queries and initialize
+        all_queries = []
+        for fn in glob.iglob(job_dir + "/*.sql"):
+            if "fk" in fn or "schem" in fn:
+                continue
+            with open(fn, "r") as f:
+                qname = os.path.basename(fn)
+                all_queries.append((qname, f.read()))
+
+        train , test = train_test_split(all_queries,test_size=config.qopt_test_size,
+                            random_state=config.qopt_test_seed)
+        trainq = {}
+        testq = {}
+        for t in train:
+            trainq[t[0]] = t[1]
+
+        for t in test:
+            testq[t[0]] = t[1]
+
+        print(len(train), len(test))
+        self.initialize_queries(trainq, mode="train")
+        self.initialize_queries(testq, mode="test")
 
     def _install_if_needed(self, name):
         '''
@@ -134,13 +180,6 @@ class QueryOptEnv(core.Env):
                     cwd=self.base_dir)
                 p.wait()
                 print("cloned query-optimizer library")
-                # now need to install the join-order-benchmark as well
-                JOB_REPO = "https://github.com/gregrahn/join-order-benchmark.git"
-                cmd = "git clone " + JOB_REPO
-                p = sp.Popen(cmd, shell=True,
-                    cwd=qopt_path)
-                p.wait()
-                print("downloaded join order benchmark queries")
         print("query optimizer path is: ", qopt_path)
 
         # TODO: if psql -d imdb already set up locally, then do not use docker
@@ -203,10 +242,8 @@ class QueryOptEnv(core.Env):
     def reset(self):
         '''
         '''
-        # print("going to test cache clear thing")
-        # cmd = "sh /home/pari/query-optimizer/test.sh"
-        # p = sp.Popen(cmd, shell=True)
-        # p.wait()
+        if not self.queries_initialized:
+            self._initialize_default_queries()
 
         self._send("reset")
         query = self._send("curQuery")
@@ -236,11 +273,6 @@ class QueryOptEnv(core.Env):
         '''
         @action: edge as represented in networkX e.g., (v1,v2)
         '''
-        # print("step!")
-        # print(self.graph.nodes())
-        # print(self.graph.edges())
-        # print(action)
-        # pdb.set_trace()
         # also, consider the reverse action (v1,v2) or (v2,v1) should mean the
         # same
         rev_action = (action[1], action[0])
@@ -477,20 +509,20 @@ class QueryOptEnv(core.Env):
         '''
         # first check if it is one of the cases in which we should just return
         # the reward without any normalization
-        # if self.only_final_reward:
-            # return reward
-        if self._min_reward is None or self._max_reward is None:
-            return reward
-
         if self.reward_normalization == "min_max":
-            # reward = (reward-self._min_reward) / \
-                    # float((self._max_reward-self._min_reward))
-            reward = np.interp(reward, [self._min_reward, self._max_reward],
-                    [0,1])
+            if self._min_reward is None or self._max_reward is None:
+                return reward
+            reward = (reward-self._min_reward) / \
+                    float((self._max_reward-self._min_reward))
+
+        elif self.reward_normalization == "scale_down":
+            reward = reward / 10e30
 
         elif self.reward_normalization == "":
             return reward
         else:
             assert False
 
+        if reward > 2.00:
+            pdb.set_trace()
         return reward
