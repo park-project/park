@@ -57,7 +57,7 @@ parser.add_argument('--warmup_delay', type=int, default=1000,
                     help='Executor warming up delay (milliseconds) (default: 1000)')
 
 # -- Query Optimizer --
-parser.add_argument('--qopt_java_output', action="store_false",
+parser.add_argument('--qopt_java_output', type=int, default=0,
                     help="should the java servers output be visible")
 # TODO: need to add more control for this
 parser.add_argument('--qopt_viz', type=int, default=0,
@@ -71,8 +71,8 @@ parser.add_argument('--qopt_train_runtime', type=int, default=0,
 
 parser.add_argument('--qopt_port', type=int, default=2654,
                     help="port for communicaton with calcite backend")
-parser.add_argument('--qopt_query', type=int, default=0,
-                    help="index of the query to run")
+parser.add_argument('--qopt_query', type=str, default="",
+                    help="list of query name substrings")
 parser.add_argument('--qopt_train', type=int, default=1,
                     help="""0 or 1. To run in training mode or test mode. Check
                     the calcite backend for more description of the two
@@ -88,7 +88,7 @@ parser.add_argument('--qopt_only_attr_features', type=int, required=False,
                             default=1, help='')
 
 parser.add_argument('--qopt_reward_normalization', type=str, required=False,
-                            default='scale_down', help='type of reward normalization')
+                            default='', help='type of reward normalization')
 parser.add_argument('--qopt_cost_model', type=str, required=False,
                             default='rowCount', help='')
 parser.add_argument('--qopt_dataset', type=str, required=False,

@@ -103,9 +103,7 @@ class QueryOptEnv(core.Env):
         self.base_dir = park.__path__[0]
         # if JOB doesn't exist, download it
         job_dir = self.base_dir + "/join-order-benchmark"
-        if os.path.exists(job_dir):
-            print("path exists")
-        else:
+        if not os.path.exists(job_dir):
             # now need to install the join-order-benchmark as well
             JOB_REPO = "https://github.com/gregrahn/join-order-benchmark.git"
             cmd = "git clone " + JOB_REPO
@@ -124,15 +122,29 @@ class QueryOptEnv(core.Env):
 
         train , test = train_test_split(all_queries,test_size=config.qopt_test_size,
                             random_state=config.qopt_test_seed)
+        valid_queries = config.qopt_query.split(",")
         trainq = {}
         testq = {}
         for t in train:
-            trainq[t[0]] = t[1]
+            if len(valid_queries) > 0:
+                for vq in valid_queries:
+                    if vq in t[0]:
+                        trainq[t[0]] = t[1]
+            else:
+                trainq[t[0]] = t[1]
 
         for t in test:
-            testq[t[0]] = t[1]
+            if len(valid_queries) > 0:
+                for vq in valid_queries:
+                    if vq in t[0]:
+                        testq[t[0]] = t[1]
+            else:
+                testq[t[0]] = t[1]
 
-        print(len(train), len(test))
+        if len(testq) == 0:
+            # for debugging
+            testq = trainq
+
         self.initialize_queries(trainq, mode="train")
         self.initialize_queries(testq, mode="test")
 
@@ -298,6 +310,9 @@ class QueryOptEnv(core.Env):
         reward = self._normalize_reward(reward)
         done = int(self._send("isDone"))
         info = None
+        # print("action: {}, reward: {}, done: {}, info: {}".format(action,
+            # reward, done, info))
+        # pdb.set_trace()
         if done:
             info = self._send("getQueryInfo")
             info = json.loads(info)
@@ -437,7 +452,7 @@ class QueryOptEnv(core.Env):
 
     def _start_java_server(self):
         JAVA_EXEC_FORMAT = 'mvn -e exec:java -Dexec.mainClass=Main \
-        -Dexec.args="-query {query} -port {port} -train {train} \
+        -Dexec.args="-port {port} -train {train} \
         -lopt {lopt} -exhaustive {exh} -leftDeep {ld} -python 1 \
         -verbose {verbose} -costModel {cm} -dataset {ds} \
         -execOnDB {execOnDB} -clearCache {clearCache} \
