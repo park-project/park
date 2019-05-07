@@ -57,7 +57,7 @@ parser.add_argument('--warmup_delay', type=int, default=1000,
                     help='Executor warming up delay (milliseconds) (default: 1000)')
 
 # -- Query Optimizer --
-parser.add_argument('--qopt_java_output', type=int, default=0,
+parser.add_argument('--qopt_java_output', type=int, default=1,
                     help="should the java servers output be visible")
 # TODO: need to add more control for this
 parser.add_argument('--qopt_viz', type=int, default=0,
@@ -77,7 +77,7 @@ parser.add_argument('--qopt_train', type=int, default=1,
                     help="""0 or 1. To run in training mode or test mode. Check
                     the calcite backend for more description of the two
                     modes.""")
-parser.add_argument('--qopt_only_final_reward', type=int,default=0, 
+parser.add_argument('--qopt_only_final_reward', type=int,default=0,
                     help="""0 or 1. If true, then only the final reward will be
                     returned.""")
 parser.add_argument('--qopt_lopt', type=int,default=0, help="0 or 1")
@@ -103,9 +103,9 @@ parser.add_argument('--qopt_test_seed', type=int, required=False,
                             default=1234, help='')
 
 # -- Cache --
-parser.add_argument('--cache_trace', type=str, required=False, default='test', 
+parser.add_argument('--cache_trace', type=str, required=False, default='test',
                     help='trace selection')
-parser.add_argument('--cache_size', type=int, required=False, default=1024, 
+parser.add_argument('--cache_size', type=int, required=False, default=1024,
                     help='size of network cache')
 
 # -- Simple Queue --

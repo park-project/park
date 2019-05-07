@@ -125,7 +125,13 @@ class QueryOptEnv(core.Env):
         valid_queries = config.qopt_query.split(",")
         trainq = {}
         testq = {}
+        # SKIP_LIST = ["7a.sql", "7c.sql", "33c.sql", "12a.sql", "9b.sql", "29c.sql",
+                    # "12c.sql", "33a.sql", "19a.sql", "29a.sql", "9a.sql",
+                    # "27a.sql"]
+        SKIP_LIST = []
         for t in train:
+            if t[0] in SKIP_LIST:
+                continue
             if len(valid_queries) > 0:
                 for vq in valid_queries:
                     if vq in t[0]:
@@ -134,6 +140,8 @@ class QueryOptEnv(core.Env):
                 trainq[t[0]] = t[1]
 
         for t in test:
+            if t[0] in SKIP_LIST:
+                continue
             if len(valid_queries) > 0:
                 for vq in valid_queries:
                     if vq in t[0]:
