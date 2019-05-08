@@ -78,8 +78,10 @@ parser.add_argument('--qopt_train', type=int, default=1,
                     the calcite backend for more description of the two
                     modes.""")
 parser.add_argument('--qopt_final_reward', type=int,default=0,
-                    help="""0 or 1. If true, then only the final reward will be
+                    help="""0 or 1. If true, then the final reward will be
                     returned.""")
+parser.add_argument('--qopt_no_intermediate_reward', type=int,default=0,
+                    help="""0 or 1.""")
 parser.add_argument('--qopt_lopt', type=int,default=0, help="0 or 1")
 parser.add_argument('--qopt_exh', type=int,default=0, help="0 or 1")
 parser.add_argument('--qopt_verbose', type=int,default=0, help="0 or 1")
@@ -101,6 +103,8 @@ parser.add_argument('--qopt_test_size', type=float, required=False,
                             default=0.5, help='')
 parser.add_argument('--qopt_test_seed', type=int, required=False,
                             default=1234, help='')
+parser.add_argument('--qopt_num_execution_reps', type=int, required=False,
+                            default=1, help='')
 
 # -- Cache --
 parser.add_argument('--cache_trace', type=str, required=False, default='test',

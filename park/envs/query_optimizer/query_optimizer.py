@@ -375,10 +375,10 @@ class QueryOptEnv(core.Env):
             # noExec mode, then there will be no final reward
             if done:
                 if "RL" in info["dbmsRuntimes"]:
-                    reward = info["dbmsRuntimes"]["RL"]
+                    reward = -info["dbmsRuntimes"]["RL"]
 
             # give no intermediate reward ONLY if final reward is ON.
-            elif config.no_intermediate_reward:
+            elif config.qopt_no_intermediate_reward:
                 reward = 0.00
 
         return self.graph, reward, done, info
@@ -478,7 +478,7 @@ class QueryOptEnv(core.Env):
         -lopt {lopt} -exhaustive {exh} -leftDeep {ld} -python 1 \
         -verbose {verbose} -costModel {cm} -dataset {ds} \
         -execOnDB {execOnDB} -clearCache {clearCache} \
-        -recomputeFixedPlanners {recompute}"'
+        -recomputeFixedPlanners {recompute} -numExecutionReps {reps}"'
         # FIXME: setting the java directory relative to the directory we are
         # executing it from?
         cmd = JAVA_EXEC_FORMAT.format(
@@ -491,8 +491,9 @@ class QueryOptEnv(core.Env):
                 verbose = config.qopt_verbose,
                 cm = config.qopt_cost_model,
                 ds = config.qopt_dataset,
-                execOnDB = config.qopt_train_runtime,
+                execOnDB = config.qopt_final_reward,
                 clearCache = config.qopt_clear_cache,
+                reps       = config.qopt_num_execution_reps,
                 recompute = config.qopt_recompute_fixed_planners)
         try:
             qopt_path = os.environ["QUERY_OPT_PATH"]
