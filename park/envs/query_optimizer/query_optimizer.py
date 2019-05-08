@@ -369,6 +369,18 @@ class QueryOptEnv(core.Env):
                     self.viz_ep += 1
                     pdb.set_trace()
 
+        # TODO: need to make this more intuitive
+        if config.qopt_final_reward:
+            # so that this is done ONLY sometimes, i.e., if we set park to
+            # noExec mode, then there will be no final reward
+            if done:
+                if "RL" in info["dbmsRuntimes"]:
+                    reward = info["dbmsRuntimes"]["RL"]
+
+            # give no intermediate reward ONLY if final reward is ON.
+            elif config.no_intermediate_reward:
+                reward = 0.00
+
         return self.graph, reward, done, info
 
     def seed(self, seed):
@@ -390,12 +402,13 @@ class QueryOptEnv(core.Env):
         TODO: explain and reuse
         '''
         if attr == "execOnDB":
-            assert config.qopt_eval_runtime or config.qopt_train_runtime
+            assert config.qopt_eval_runtime or config.qopt_final_reward
             if val:
                 self._send("execOnDB")
             else:
-                assert not config.qopt_train_runtime
-                self._send("noExecOnDB")
+                # assert not config.qopt_final_reward
+                if not config.qopt_final_reward:
+                    self._send("noExecOnDB")
         else:
             assert False
 
@@ -498,7 +511,7 @@ class QueryOptEnv(core.Env):
             )
 
         compile_pr = sp.Popen("mvn package", shell=True,
-                cwd=qopt_path, 
+                cwd=qopt_path,
                 preexec_fn=os.setsid)
         compile_pr.wait()
 

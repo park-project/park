@@ -66,8 +66,8 @@ parser.add_argument('--qopt_viz', type=int, default=0,
 # parameters to be passed to the calcite backend
 parser.add_argument('--qopt_eval_runtime', type=int, default=0,
                     help="execute query plan on db, to get runtimes, when evaluating")
-parser.add_argument('--qopt_train_runtime', type=int, default=0,
-                    help="train using runtimes from DB")
+# parser.add_argument('--qopt_train_runtime', type=int, default=0,
+                    # help="train using runtimes from DB")
 
 parser.add_argument('--qopt_port', type=int, default=2654,
                     help="port for communicaton with calcite backend")
@@ -77,7 +77,7 @@ parser.add_argument('--qopt_train', type=int, default=1,
                     help="""0 or 1. To run in training mode or test mode. Check
                     the calcite backend for more description of the two
                     modes.""")
-parser.add_argument('--qopt_only_final_reward', type=int,default=0,
+parser.add_argument('--qopt_final_reward', type=int,default=0,
                     help="""0 or 1. If true, then only the final reward will be
                     returned.""")
 parser.add_argument('--qopt_lopt', type=int,default=0, help="0 or 1")
