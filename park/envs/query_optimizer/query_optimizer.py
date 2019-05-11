@@ -315,10 +315,22 @@ class QueryOptEnv(core.Env):
         # and block when the reward has been set
 
         self._observe()
-        reward = float(self._send("getReward"))
-        reward = self._normalize_reward(reward)
+        orig_reward = float(self._send("getReward"))
+        reward = self._normalize_reward(orig_reward)
+        if self.reward_normalization == "min_max":
+            if not (self._min_reward is None or self._max_reward is None):
+                stored_rewards = self.reward_mapper[self.current_query]
+                if orig_reward < self._min_reward:
+                    self.reward_mapper[self.current_query] = (orig_reward,
+                            stored_rewards[1])
+                elif orig_reward > self._max_reward:
+                    self.reward_mapper[self.current_query] = (stored_rewards[0],
+                                                    orig_reward)
+
         done = int(self._send("isDone"))
         info = None
+
+
         # print("action: {}, reward: {}, done: {}, info: {}".format(action,
             # reward, done, info))
         # pdb.set_trace()
