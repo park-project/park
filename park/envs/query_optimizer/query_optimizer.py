@@ -402,13 +402,10 @@ class QueryOptEnv(core.Env):
         TODO: explain and reuse
         '''
         if attr == "execOnDB":
-            assert config.qopt_eval_runtime or config.qopt_final_reward
             if val:
                 self._send("execOnDB")
             else:
-                # assert not config.qopt_final_reward
-                if not config.qopt_final_reward:
-                    self._send("noExecOnDB")
+                self._send("noExecOnDB")
         else:
             assert False
 
@@ -478,7 +475,8 @@ class QueryOptEnv(core.Env):
         -lopt {lopt} -exhaustive {exh} -leftDeep {ld} -python 1 \
         -verbose {verbose} -costModel {cm} -dataset {ds} \
         -execOnDB {execOnDB} -clearCache {clearCache} \
-        -recomputeFixedPlanners {recompute} -numExecutionReps {reps}"'
+        -recomputeFixedPlanners {recompute} -numExecutionReps {reps} \
+        -maxExecutionTime {max_exec}"'
         # FIXME: setting the java directory relative to the directory we are
         # executing it from?
         cmd = JAVA_EXEC_FORMAT.format(
@@ -494,6 +492,7 @@ class QueryOptEnv(core.Env):
                 execOnDB = config.qopt_final_reward,
                 clearCache = config.qopt_clear_cache,
                 reps       = config.qopt_num_execution_reps,
+                max_exec   = config.qopt_max_execution_time,
                 recompute = config.qopt_recompute_fixed_planners)
         try:
             qopt_path = os.environ["QUERY_OPT_PATH"]

@@ -64,8 +64,8 @@ parser.add_argument('--qopt_viz', type=int, default=0,
                     help="visualizations per episode")
 
 # parameters to be passed to the calcite backend
-parser.add_argument('--qopt_eval_runtime', type=int, default=0,
-                    help="execute query plan on db, to get runtimes, when evaluating")
+# parser.add_argument('--qopt_eval_runtime', type=int, default=0,
+                    # help="execute query plan on db, to get runtimes, when evaluating")
 # parser.add_argument('--qopt_train_runtime', type=int, default=0,
                     # help="train using runtimes from DB")
 
@@ -105,6 +105,8 @@ parser.add_argument('--qopt_test_seed', type=int, required=False,
                             default=1234, help='')
 parser.add_argument('--qopt_num_execution_reps', type=int, required=False,
                             default=1, help='')
+parser.add_argument('--qopt_max_execution_time', type=int, required=False,
+                            default=1200, help='')
 
 # -- Cache --
 parser.add_argument('--cache_trace', type=str, required=False, default='test',
