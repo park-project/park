@@ -128,14 +128,15 @@ class CDFHist:
     
 class QueryGen:
     def __init__(self, datafile, sample=10000000):
+        self.rand = np.random.RandomState(0)
         dataset = np.fromfile(datafile, dtype=np.int64).reshape(-1, 6)
-        ixs = np.random.choice(len(dataset), sample, replace=False)
+        ixs = self.rand.choice(len(dataset), sample, replace=False)
         data = dataset[ixs, :]
         self.data = data[np.argsort(data[:,3]), :]
 
         # Choose a selectivity between 5e-5 and 5e-2. However, we want to choose selectivities
         # uniformly over a *logarithmic* space, so each power of 10 is chosen with equal prob.
-        self.target_selectivity = 5 * math.pow(10, (np.random.sample() * 3 - 5))
+        self.target_selectivity = 5 * math.pow(10, (self.rand.random_sample() * 3 - 5))
         print('Target selectivity =', self.target_selectivity)
         
         self.hist, self.edges = None, None
@@ -145,9 +146,11 @@ class QueryGen:
         self.hist_way, self.edges_way, self.ixs_way = None, None, None
         self.gen_histogram()
         # Generate a probability distribution over the query types.
-        self.query_probs = np.cumsum(np.random.sample(NUM_QUERY_TYPES))
+        self.query_probs = np.cumsum(self.rand.random_sample(NUM_QUERY_TYPES))
         self.query_probs /= np.max(self.query_probs)
 
+    def seed(self, seed):
+        self.rand.seed(seed)
 
     def gen_histogram(self):
         #self.data = self.data[(self.data[:,2] > 0) + (self.data[:,3] > 0), 2:5]
@@ -173,18 +176,18 @@ class QueryGen:
         ranges1 = (0, hist.buckets[0])
         if sels[2] < 1:
             sel = sels[2]
-            start1 = random.random() * (1 - sel)
+            start1 = self.rand.random_sample() * (1 - sel)
             end1 = start1 + sel
             vals1, ranges1 = hist.values_for_cdf1(start1, end1)
         if sels[0] < 1:
             ranges2 = (0, hist.buckets[1])
             sel = sels[0] 
-            start2 = random.random() * (1-sel)
+            start2 = self.rand.random_sample() * (1-sel)
             end2 = start2 + sel
             vals2, ranges2 = hist.values_for_cdf2(start2, end2, ranges1)
             if sels[1] < 1:
                 sel = sels[1]
-                start3 = random.random() * (1-sel)
+                start3 = self.rand.random_sample() * (1-sel)
                 end3 = start3 + sel
                 vals3 = hist.values_for_cdf3(start3, end3, ranges1, ranges2)
         return vals2, vals3, vals1
@@ -213,22 +216,22 @@ class QueryGen:
         end = [PINF] * 6
 
         target_sel = self.target_selectivity
-        choice = np.random.sample()
+        choice = self.rand.random_sample()
         if choice < self.query_probs[0]:
             _, _, s = self.range([1, 1, target_sel])
             start[3], end[3] = s[0], s[1]
         elif choice < self.query_probs[1]:
             targ = math.sqrt(target_sel)
             var = 0.1 * targ
-            r = random.random() * var + (targ - var/2)
+            r = self.rand.random_sample() * var + (targ - var/2)
             a, b, _ = self.range([r, target_sel/r, 1], clean=True)
             start[1], end[1] = a[0], a[1]
             start[2], end[2] = b[0], b[1]
         elif choice < self.query_probs[2]:
-            r = random.random() * 0.05 + target_sel #0.4 + 0.2
+            r = self.rand.random_sample() * 0.05 + target_sel #0.4 + 0.2
             targ = math.sqrt(target_sel/r)
             var = 0.1 * targ
-            w = random.random() * var + (targ - var/2)
+            w = self.rand.random_sample() * var + (targ - var/2)
             a, b, c = self.range([w, target_sel/(w*r), r], clean=True)
             start[1], end[1] = a[0], a[1]
             start[2], end[2] = b[0], b[1]
@@ -257,10 +260,10 @@ class QueryGen:
             start[4], end[4] = NODE_IX, NODE_IX
         else:
             new_target = (target_sel * len(self.data)) / len(self.ixs_bld)
-            r = random.random() * 0.4 + 0.2
+            r = self.rand.random_sample() * 0.4 + 0.2
             targ = math.sqrt(new_target/r)
             var = 0.1 * targ
-            w = random.random() * var + (targ - var/2)
+            w = self.rand.random_sample() * var + (targ - var/2)
             a, b, c = self.range([w, new_target/(w*r), r], bld=True)
             start[1], end[1] = a[0], a[1]
             start[2], end[2] = b[0], b[1]

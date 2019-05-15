@@ -5,11 +5,11 @@ from park.envs.multi_dim_index.spaces import ActionSpace, DataObsSpace, QueryObs
 from park.envs.multi_dim_index.config import Action, DataObs, QueryObs, Query
 from park.envs.multi_dim_index.gen_osm_queries import QueryGen
 from park.envs.multi_dim_index.monotonic_rmi2 import MonotonicRMI
-import random
 import numpy as np
 from park.spaces.tuple_space import Tuple
 import wget
 import os
+import random
 import stat
 import sys
 import subprocess
@@ -89,7 +89,7 @@ class MultiDimIndexEnv(Env):
         print('Running range query workload took', end-start, 's')
 
         reward = 1./np.mean(times)
-        obs = (DataObs(params.DATASET_PATH, QueryObs(new_queries))
+        obs = (DataObs(params.DATASET_PATH), QueryObs(new_queries))
         self.step_count += 1
 
         # The query times are given as information.
@@ -106,8 +106,8 @@ class MultiDimIndexEnv(Env):
 
     def seed(self, seed=None):
         if seed is not None:
-            random.seed(seed)
-            np.random.seed(seed + 5)
+            self.query_generator.seed(seed)
+            random.seed(seed+5)
 
     # Generates a coarse summary of each data dimension, which the indexer uses to divvy up data
     # into columns.
