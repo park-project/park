@@ -48,15 +48,35 @@ database in the U.S. Northeast. There are 6 attributes, all integers, which are 
 ## Query workload
 
 The query workload is randomly generated to mimic analytics questions one might reasonably ask about
-the data, such as:
+the data.
+In total, there are 7 types of queries, all of which compute a COUNT(*) aggregate:
 * How many Buildings (Primary Type = 3) exist within a given lat-lon rectangle?
-* How many nodes were added in a particular window of time?
+* How many landmarks (i.e., nodes) were added in a particular window of time?
+* How many total elements were added were added during a particular time? 
+* How many landmarks (i.e. nodes) are in a particular area?
+* How many landmarks were added by users in a given area over a particular time window?
+* How many Highways (Primary Type = 11) exist in a given lat-lon rectangle?
+* How many ways (a type of OSM element) were added within a given time window? 
 
-In total, there are 7 types of queries, all of which compute a COUNT(*) aggregate.
-The frequency of each type of query and its selectivity vary based on the random seed
-`QUERY_GEN_SEED`.
+## RL Environment
 
-## RL Agent
+Every run of this environment uses the same OSM dataset. Each epoch uses a different query
+distribution, generated randomly by the seed passed into `MultiDimIndexEnv.seed()`.
+Each query distribution consists of a randomly chosen selectivity between 0.05\%
+and 5%, and a probability distribution over the query types listed above.
 
+Each epoch lasts for a fixed number of runs, which can be changed in `params.py`.
+Each run in an epoch uses a different query workload generated from that epoch's distribution. The
+workload is generated so that the
+average selectivity of the queries in the workload (i.e., the fraction of points returned in the
+result) matches the target selectivity of the distribution.
+
+The reward for the agent is the _query throughput_, defined as the reciprocal of the average query
+time in seconds. 
+After each run, the agent is given the queries that produced that reward, along with the times
+taken for each query.
+The RL agent always has access to the dataset via observations.
+It is the agent's goal to increase throughput (minimize query time) on the query distribution for
+that epoch.
 
  
