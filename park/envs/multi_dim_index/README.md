@@ -35,7 +35,7 @@ The last one is the sort dimension.
 ## Dataset
 
 The dataset consists of all entries added to the [Open Street Maps (OSM)](www.openstreetmap.org)
-database in the U.S. Northeast. There are 6 attributes, all integers, which are (in order):
+database in the U.S. Northeast (105 million records). There are 6 attributes, all integers, which are (in order):
 * User ID: a unique number identifying the user who added the entry
 * Latitude: the point's latitude (GPS coordinates have resolutions of 1e-7, so they are scaled
   accordingly into integers)
