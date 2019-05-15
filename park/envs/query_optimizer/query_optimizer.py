@@ -121,14 +121,14 @@ class QueryOptEnv(core.Env):
                 qname = os.path.basename(fn)
                 all_queries.append((qname, f.read()))
 
+        # by splitting first based on random_state, we ensure that if only a
+        # subset of the queries are being run (using the qopt_query argument),
+        # then the train queries / test queries would still be the same
         train , test = train_test_split(all_queries,test_size=config.qopt_test_size,
                             random_state=config.qopt_test_seed)
         valid_queries = config.qopt_query.split(",")
         trainq = {}
         testq = {}
-        # SKIP_LIST = ["7a.sql", "7c.sql", "33c.sql", "12a.sql", "9b.sql", "29c.sql",
-                    # "12c.sql", "33a.sql", "19a.sql", "29a.sql", "9a.sql",
-                    # "27a.sql"]
         SKIP_LIST = []
         for t in train:
             if t[0] in SKIP_LIST:
