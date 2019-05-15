@@ -88,8 +88,8 @@ class MultiDimIndexEnv(Env):
         end = timer()
         print('Running range query workload took', end-start, 's')
 
-        reward = np.mean(times)
-        obs = QueryObs(new_queries)
+        reward = 1./np.mean(times)
+        obs = (DataObs(params.DATASET_PATH, QueryObs(new_queries))
         self.step_count += 1
 
         # The query times are given as information.

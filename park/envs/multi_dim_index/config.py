@@ -40,8 +40,9 @@ def DataIterator(datafile):
 
 class DataObs:
     def __init__(self, datafile):
-        df = datafile if datafile is not None else params.DATA_FILE
+        df = datafile if datafile is not None else params.DATASET_PATH
         self.data_iterator = DataIterator(df)
+        self.datafile = df
 
 class QueryObs:
     def __init__(self, qs):
