@@ -1,5 +1,6 @@
 import random
-import params
+import numpy as np
+from park.envs.multi_dim_index.params import Params as params
 
 # A range predicate to issue to the database.
 class Query:
@@ -22,8 +23,12 @@ class Action:
         # the number of columns in each dimension.
         self.columns = cols
 
+    def tofile(self, filename):
+        arr = [len(self.dimensions)-1] + self.dimensions + self.columns
+        np.array(arr, dtype=np.float64).tofile(filename)
+
 def DataIterator(datafile):
-    with df as open(datafile, 'rb'):
+    with open(datafile, 'rb') as df:
         while True:
             # Each value is a 64-bit number
             pt_bytes = df.read(params.NDIMS * 8)
@@ -39,10 +44,10 @@ class DataObs:
         self.data_iterator = DataIterator(df)
 
 class QueryObs:
-    def __init__(self, qs, times):
+    def __init__(self, qs):
         self.queries = []
         for q in qs:
-            d = len(q)/2
+            d = int(len(q)/2)
             # Each query is a 2*d numpy array, with the start and endpoints concatenated
             self.queries.append(Query(q[:d], q[d:]))
 

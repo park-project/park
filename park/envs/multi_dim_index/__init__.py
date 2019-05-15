@@ -1,1 +1,1 @@
-from park.envs.index.index import MultiDimIndexEnv
+from park.envs.multi_dim_index.index import MultiDimIndexEnv

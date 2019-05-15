@@ -22,26 +22,6 @@ PINF = 1 << 50
 NINF = -(1 << 50)
 NUM_QUERY_TYPES = 7
 
-parser = argparse.ArgumentParser('OSM QueryGen')
-parser.add_argument('--dataset',
-        required=True,
-        type=str,
-        help='binary dataset file')
-parser.add_argument('--num-queries',
-        required=True,
-        type=int,
-        help='Number of queries to generate')
-parser.add_argument('--outfile',
-        required=True,
-        type=str,
-        help='binary query output file')
-parser.add_argument('--query-type',
-        type=int,
-        choices=range(len(QUERY_PROB)),
-        default=0,
-        help="Query type to choose from")
-args = parser.parse_args()
-
 ## Business questions for this query:
 # How many elements were added by users in a time window of length N? (1)
 # How many elements exist in a particular lat/lon box? (2)
@@ -148,14 +128,14 @@ class CDFHist:
     
 class QueryGen:
     def __init__(self, datafile, sample=10000000):
-        dataset = np.fromfile(args.dataset, dtype=np.int64).reshape(-1, 6)
+        dataset = np.fromfile(datafile, dtype=np.int64).reshape(-1, 6)
         ixs = np.random.choice(len(dataset), sample, replace=False)
         data = dataset[ixs, :]
         self.data = data[np.argsort(data[:,3]), :]
 
         # Choose a selectivity between 5e-5 and 5e-2. However, we want to choose selectivities
         # uniformly over a *logarithmic* space, so each power of 10 is chosen with equal prob.
-        self.target_selectivity = 5 * math.pow(10, np.random.randint(-5, -1))
+        self.target_selectivity = 5 * math.pow(10, (np.random.sample() * 3 - 5))
         print('Target selectivity =', self.target_selectivity)
         
         self.hist, self.edges = None, None
@@ -166,7 +146,7 @@ class QueryGen:
         self.gen_histogram()
         # Generate a probability distribution over the query types.
         self.query_probs = np.cumsum(np.random.sample(NUM_QUERY_TYPES))
-        self.query_probs = np.max(self.query_probs)
+        self.query_probs /= np.max(self.query_probs)
 
 
     def gen_histogram(self):
@@ -213,27 +193,19 @@ class QueryGen:
     def range(self, target_sels, bld=False, hwy=False, clean=False, way=False):
         r = None
         count = 0
-        print(target_sels)
         while r is None:
             count += 1
             if clean:
-                print('Clean')
                 r = self.range_impl(target_sels, self.hist_clean)
             elif way:
-                print('Way')
                 r = self.range_impl(target_sels, self.hist_way)
             elif bld:
-                print('Bldg')
                 r = self.range_impl(target_sels, self.hist_bld)
             elif hwy:
-                print('Hwy')
                 r = self.range_impl(target_sels, self.hist_hwy)
             else:
-                print('Full')
                 r = self.range_impl(target_sels, self.hist)
         
-        print('Num tries:', count)
-        print(r)
         return r
 
     def random_query(self):
@@ -242,17 +214,17 @@ class QueryGen:
 
         target_sel = self.target_selectivity
         choice = np.random.sample()
-        if choice < query_probs[0]:
+        if choice < self.query_probs[0]:
             _, _, s = self.range([1, 1, target_sel])
             start[3], end[3] = s[0], s[1]
-        elif choice < query_probs[1]:
+        elif choice < self.query_probs[1]:
             targ = math.sqrt(target_sel)
             var = 0.1 * targ
             r = random.random() * var + (targ - var/2)
             a, b, _ = self.range([r, target_sel/r, 1], clean=True)
             start[1], end[1] = a[0], a[1]
             start[2], end[2] = b[0], b[1]
-        elif choice < query_probs[2]:
+        elif choice < self.query_probs[2]:
             r = random.random() * 0.05 + target_sel #0.4 + 0.2
             targ = math.sqrt(target_sel/r)
             var = 0.1 * targ
@@ -261,24 +233,24 @@ class QueryGen:
             start[1], end[1] = a[0], a[1]
             start[2], end[2] = b[0], b[1]
             start[3], end[3] = c[0], c[1]
-        elif choice < query_probs[3]:
+        elif choice < self.query_probs[3]:
             new_target = (target_sel * len(self.data)) / len(self.ixs_bld)
             _, _, s = self.range([1, 1, new_target], bld=True)
             start[3], end[3] = s[0], s[1]
             start[4], end[4] = WAY_IX, WAY_IX
             start[5], end[5] = BUILDING_IX, BUILDING_IX
-        elif choice < query_probs[4]:
+        elif choice < self.query_probs[4]:
             new_target = (target_sel * len(self.data)) / len(self.ixs_hwy)
             _, _, s = self.range([1, 1, new_target], hwy=True)
             start[3], end[3] = s[0], s[1]
             start[4], end[4] = WAY_IX, WAY_IX
             start[5], end[5] = HIGHWAY_IX, HIGHWAY_IX
-        elif choice < query_probs[5]:
+        elif choice < self.query_probs[5]:
             new_target = (target_sel * len(self.data)) / len(self.ixs_way)
             _, _, s = self.range([1, 1, new_target], way=True)
             start[3], end[3] = s[0], s[1]
             start[4], end[4] = WAY_IX, WAY_IX
-        elif choice < query_probs[6]:
+        elif choice < self.query_probs[6]:
             new_target = (target_sel * len(self.data)) / len(self.ixs_clean)
             _, _, s = self.range([1, 1, new_target],clean=True)
             start[3], end[3] = s[0], s[1]

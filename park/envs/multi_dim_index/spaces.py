@@ -1,6 +1,7 @@
 import random
-import params
-from config import Action, Query
+from park.core import Space
+from park.envs.multi_dim_index.params import Params as params
+from park.envs.multi_dim_index.config import Action, Query
 
 class ActionSpace(Space):
     def sample(self):
@@ -16,7 +17,7 @@ class ActionSpace(Space):
         valid &= (len(a.dimensions) <= params.NDIMS)
         for d in a.dimensions:
             valid &= isinstance(d, int)
-            valid &= (d < params.NDIMS && d >= 0)
+            valid &= (d < params.NDIMS) and (d >= 0)
         valid &= (len(a.columns) == len(a.dimensions)-1)
         for c in a.columns:
             valid &= isinstance(c, int)
@@ -35,6 +36,6 @@ class QueryObsSpace(Space):
         pass
 
     def contains(self, s):
-        return isinstance(s, Query) && s.valid()
+        return isinstance(s, Query) and s.valid()
 
 
