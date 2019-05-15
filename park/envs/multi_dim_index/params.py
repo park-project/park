@@ -26,5 +26,5 @@ class Params:
     DATA_SUMMARY_DIR = park.__path__[0] + '/envs/multi_dim_index/data'
 
     BINARY_PATH = park.__path__[0] + '/envs/multi_dim_index/exec/mdi_db'
-    BINARY_DOWNLOAD_URL = 'https://www.dropbox.com/s/j6803o5xjspk63j/mdi_db?dl=1'
+    BINARY_DOWNLOAD_URL = 'https://www.dropbox.com/s/5w1ngr2ejnxso0z/mdi_db?dl=1'
 
