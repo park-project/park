@@ -15,6 +15,9 @@ class ActionSpace(Space):
     def contains(self, a):
         valid = True
         valid &= (len(a.dimensions) <= params.NDIMS)
+        # Make sure no dimensions are duplicated in the grid list (except the sort dimension
+        # can be the same as a grid dimension).
+        valid &= len(set(a.dimensions[:-1])) == len(a.dimensions[:-1])
         for d in a.dimensions:
             valid &= isinstance(d, int)
             valid &= (d < params.NDIMS) and (d >= 0)
