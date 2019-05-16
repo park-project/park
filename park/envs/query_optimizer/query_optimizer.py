@@ -114,7 +114,8 @@ class QueryOptEnv(core.Env):
 
         # read in queries and initialize
         all_queries = []
-        for fn in glob.iglob(job_dir + "/*.sql"):
+        fns = sorted(glob.iglob(job_dir + "/*.sql"))
+        for fn in fns:
             if "fk" in fn or "schem" in fn:
                 continue
             with open(fn, "r") as f:
