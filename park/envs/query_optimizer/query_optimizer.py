@@ -17,6 +17,7 @@ import signal
 import glob
 from sklearn.model_selection import train_test_split
 import wget
+import psycopg2
 
 def find_available_port(orig_port):
     conns = psutil.net_connections()
@@ -208,6 +209,18 @@ class QueryOptEnv(core.Env):
         # to set up postgres. Is this really useful, or should we just assume
         # docker is always the way to go?
 
+        conn_failed = False
+        try:
+            conn = psycopg2.connect(host="localhost",port=5432,dbname="imdb",
+                    user="imdb",password="")
+        except:
+            print("connection crashed!")
+            conn_failed = True
+            pdb.set_trace()
+        print("connection successful!")
+        if not conn_failed:
+            return
+
         # TODO: print plenty of warning messages: going to start docker,
         # docker's directory should have enough space - /var/lib/docker OR
         # change it manually following instructions at >>>> .....
@@ -243,7 +256,6 @@ class QueryOptEnv(core.Env):
         time.sleep(2)
         # need to ensure that we psql has started in the container. If this is
         # the first time it is starting, then pg_restore could take a while.
-        import psycopg2
         while True:
             try:
                 conn = psycopg2.connect(host="localhost",port=5400,dbname="imdb",
@@ -393,7 +405,7 @@ class QueryOptEnv(core.Env):
             # give no intermediate reward ONLY if final reward is ON.
             elif config.qopt_no_intermediate_reward:
                 reward = 0.00
-
+        print("returning reward: ", reward)
         return self.graph, reward, done, info
 
     def seed(self, seed):
