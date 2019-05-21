@@ -2,7 +2,6 @@
 
 from park.envs.registration import register, make
 
-
 register(
     env_id='load_balance',
     entry_point='park.envs.load_balance:LoadBalanceEnv',
@@ -77,3 +76,9 @@ register(
     env_id='region_assignment',
     entry_point='park.envs.region_assignment:RegionAssignmentEnv'
 )
+
+register(
+    env_id='multi_dim_index',
+    entry_point='park.envs.multi_dim_index:MultiDimIndexEnv'
+)
+

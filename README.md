@@ -57,6 +57,7 @@ while not done:
 | Account region assignment       |region_assignment                  | Ryan Marcus |
 | Server load balancing           |load_balance                       | Hongzi Mao |
 | Switch scheduling               |switch_scheduling                  | Ravichandra Addanki, Hongzi Mao |
+| Multi-dimensional Indexing      |multi_dim_index                    | Vikram Nathan |
 
 ### Misc
 Note: to use `argparse` that is compatiable with park parameters, add parameters using
