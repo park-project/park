@@ -338,6 +338,9 @@ class QueryOptEnv(core.Env):
         if done:
             info = self._send("getQueryInfo")
             info = json.loads(info)
+            for k,v in info["joinOrders"].items():
+                print(k, v)
+
             # output episode based plots / viz
             if config.qopt_viz:
                 # FIXME: this reasoning should get a lot SIMPLER once we start
