@@ -104,7 +104,7 @@ parser.add_argument('--qopt_test_size', type=float, required=False,
 parser.add_argument('--qopt_test_seed', type=int, required=False,
                             default=1234, help='')
 parser.add_argument('--qopt_num_execution_reps', type=int, required=False,
-                            default=1, help='')
+                            default=1000, help='')
 parser.add_argument('--qopt_max_execution_time', type=int, required=False,
                             default=1200, help='')
 

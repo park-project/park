@@ -156,6 +156,8 @@ class QueryOptEnv(core.Env):
             # for debugging
             testq = trainq
 
+        print("training queries: ", trainq.keys())
+        print("test queries: ", testq.keys())
         self.initialize_queries(trainq, mode="train")
         self.initialize_queries(testq, mode="test")
 
@@ -237,8 +239,9 @@ class QueryOptEnv(core.Env):
         # start / or create new docker container
         # Note: we need to start docker in a privileged mode so we can clear
         # cache later on.
+        local_port = 5432
         docker_run = "sudo docker run --name {} -p \
-        5400:5432 --privileged -d {}".format(container_name, docker_img_name)
+        {}:5432 --privileged -d {}".format(container_name, local_port,docker_img_name)
         docker_start_cmd = "sudo docker start docker-pg || " + docker_run
         p = sp.Popen(docker_start_cmd, shell=True, cwd=docker_dir)
         p.wait()
@@ -258,7 +261,7 @@ class QueryOptEnv(core.Env):
         # the first time it is starting, then pg_restore could take a while.
         while True:
             try:
-                conn = psycopg2.connect(host="localhost",port=5400,dbname="imdb",
+                conn = psycopg2.connect(host="localhost",port=local_port,dbname="imdb",
         user="imdb",password="imdb")
                 conn.close();
                 break
@@ -405,7 +408,6 @@ class QueryOptEnv(core.Env):
             # give no intermediate reward ONLY if final reward is ON.
             elif config.qopt_no_intermediate_reward:
                 reward = 0.00
-        print("returning reward: ", reward)
         return self.graph, reward, done, info
 
     def seed(self, seed):
