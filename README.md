@@ -51,13 +51,13 @@ while not done:
 | SQL database query optimization |query_optimizer                    | Parimarjan Negi |
 | Network congestion control      |congestion_control                 | Akshay Narayan, Frank Cangialosi |
 | Network active queue management |aqm                                | Mehrdad Khani, Songtao He |
-| Circuit design                  |circuit_design                     | Hanrui Wang, Jiacheng Yang |
 | Tensorflow device placement     |tf_placement, tf_placement_sim     | Ravichandra Addanki |
+| Circuit design                  |circuit_design                     | Hanrui Wang, Jiacheng Yang |
 | CDN memory caching              |cache                              | Haonan Wang, Wei-Hung Weng |
+| Multi-dim database indexing     |multi_dim_index                    | Vikram Nathan |
 | Account region assignment       |region_assignment                  | Ryan Marcus |
 | Server load balancing           |load_balance                       | Hongzi Mao |
 | Switch scheduling               |switch_scheduling                  | Ravichandra Addanki, Hongzi Mao |
-| Multi-dimensional Indexing      |multi_dim_index                    | Vikram Nathan |
 
 ### Misc
 Note: to use `argparse` that is compatiable with park parameters, add parameters using
