@@ -77,7 +77,7 @@ class CacheSim(object):
         self.cache_size = cache_size
         self.policy = policy
         self.action_space = action_space
-        self.state_space = state_space
+        self.observation_space = state_space
         self.req = 0
         self.non_cache = defaultdict(list)
         self.cache = defaultdict(list)  # requested items with caching
@@ -239,7 +239,7 @@ class CacheEnv(core.Env):
 
         # set up the state and action space
         self.action_space = spaces.Discrete(2)
-        self.state_space = spaces.Box(self.src.min_values, \
+        self.observation_space = spaces.Box(self.src.min_values, \
                                       self.src.max_values, \
                                       dtype=np.float32)
 
@@ -247,7 +247,7 @@ class CacheEnv(core.Env):
         self.sim = CacheSim(cache_size=self.cache_size, \
                             policy='lru', \
                             action_space=self.action_space, \
-                            state_space=self.state_space)
+                            state_space=self.observation_space)
 
         # reset environment (generate new jobs)
         self.reset(1, 2)

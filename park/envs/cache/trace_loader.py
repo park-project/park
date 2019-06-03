@@ -9,9 +9,9 @@ import park
 def load_traces(trace, cache_size, rnd):
     if trace == 'test':
         trace_folder = park.__path__[0] + '/envs/cache/traces/'
-
         if not os.path.exists(trace_folder):
             os.mkdir(trace_folder)
+        if not os.path.exists(trace_folder + 'test_trace/'):
             wget.download(
                 'https://www.dropbox.com/s/bfed1jk38sfvpez/test_trace.zip?dl=1',
                 out=trace_folder)
