@@ -41,12 +41,12 @@ class QueryOptEnv(core.Env):
         self.port = find_available_port(config.qopt_port)
 
         # start calcite + java server
-        logger.info("port = " + str(self.port))
+        # logger.info("port = " + str(self.port))
         self._start_java_server()
 
         context = zmq.Context()
         #  Socket to talk to server
-        logger.info("Going to connect to calcite server")
+        # logger.debug("Going to connect to calcite server")
         self.socket = context.socket(zmq.PAIR)
         self.socket.connect("tcp://localhost:" + str(self.port))
         self.reward_normalization = config.qopt_reward_normalization
@@ -85,6 +85,19 @@ class QueryOptEnv(core.Env):
 
         self.queries_initialized = False
 
+    def initialize_cardinalities(self, cardinalities):
+        '''
+        @cardinalities: dict
+            key: query name
+            val: dict
+                key: [table names] (sorted alphabetically)
+                val: cardinality (after the relevant predicates in the given
+                                  query are applied)
+        '''
+        # TODO: add error checking to ensure these cover the queries
+        self._send("setCardinalities")
+        self._send(json.dumps(cardinalities))
+
     def initialize_queries(self, queries, mode="train"):
         '''
         @queries: dict
@@ -120,7 +133,10 @@ class QueryOptEnv(core.Env):
             if "fk" in fn or "schem" in fn:
                 continue
             with open(fn, "r") as f:
-                qname = os.path.basename(fn)
+                # FIXME: this is just required because the cardinalities json
+                # files had keys like this. Can change those, so only query'
+                # file name is the key
+                qname = "join-order-benchmark/" + os.path.basename(fn)
                 all_queries.append((qname, f.read()))
 
         # by splitting first based on random_state, we ensure that if only a
@@ -156,8 +172,8 @@ class QueryOptEnv(core.Env):
             # for debugging
             testq = trainq
 
-        print("training queries: ", trainq.keys())
-        print("test queries: ", testq.keys())
+        # print("training queries: ", trainq.keys())
+        # print("test queries: ", testq.keys())
         self.initialize_queries(trainq, mode="train")
         self.initialize_queries(testq, mode="test")
 
@@ -169,7 +185,13 @@ class QueryOptEnv(core.Env):
         # Check if docker is installed.
         cmd_string = "which {}".format(name)
         # which_pg_output = sp.check_output(cmd_string.split())
-        process = sp.Popen(cmd_string.split())
+        FNULL = open(os.devnull, 'w')
+        # compile_pr = sp.Popen("mvn package", shell=True,
+                # cwd=qopt_path, stdout=FNULL, stderr=FNULL,
+                # preexec_fn=os.setsid)
+        process = sp.Popen(cmd_string.split(), shell=False, stdout=FNULL,
+                stderr=FNULL)
+        FNULL.close()
         ret_code = process.wait()
         if ret_code != 0:
             # TODO: different installations based on OS, so this should be
@@ -185,7 +207,7 @@ class QueryOptEnv(core.Env):
             - set path appropriately to run java stuff
          - use docker to install, and start postgres
         """
-        logger.info("installing dependencies for query optimizer")
+        # logger.info("installing dependencies for query optimizer")
         self.base_dir = park.__path__[0]
         self._install_if_needed("docker")
         self._install_if_needed("mvn")
@@ -205,7 +227,7 @@ class QueryOptEnv(core.Env):
                     cwd=self.base_dir)
                 p.wait()
                 print("cloned query-optimizer library")
-        print("query optimizer path is: ", qopt_path)
+        # print("query optimizer path is: ", qopt_path)
 
         # TODO: if psql -d imdb already set up locally, then do not use docker
         # to set up postgres. Is this really useful, or should we just assume
@@ -219,7 +241,6 @@ class QueryOptEnv(core.Env):
             print("connection crashed!")
             conn_failed = True
             pdb.set_trace()
-        print("connection successful!")
         if not conn_failed:
             return
 
@@ -537,16 +558,25 @@ class QueryOptEnv(core.Env):
                 out=qopt_path + "/pg.json"
             )
 
-        compile_pr = sp.Popen("mvn package", shell=True,
-                cwd=qopt_path,
-                preexec_fn=os.setsid)
+        if not config.qopt_java_output:
+            FNULL = open(os.devnull, 'w')
+            compile_pr = sp.Popen("mvn package", shell=True,
+                    cwd=qopt_path, stdout=FNULL, stderr=FNULL,
+                    preexec_fn=os.setsid)
+            FNULL.close()
+        else:
+            compile_pr = sp.Popen("mvn package", shell=True,
+                    cwd=qopt_path,
+                    preexec_fn=os.setsid)
+
         compile_pr.wait()
 
         if not config.qopt_java_output:
             FNULL = open(os.devnull, 'w')
             self.java_process = sp.Popen(cmd, shell=True,
-                    cwd=qopt_path, stdout=FNULL,
+                    cwd=qopt_path, stdout=FNULL, stderr=FNULL,
                     preexec_fn=os.setsid)
+            FNULL.close()
         else:
             self.java_process = sp.Popen(cmd, shell=True,
                     cwd=qopt_path, preexec_fn=os.setsid)
@@ -589,6 +619,9 @@ class QueryOptEnv(core.Env):
                 return reward
             reward = (reward-self._min_reward) / \
                     float((self._max_reward-self._min_reward))
+            reward = max(0, reward)
+            # reward = np.interp(reward, [0,1])
+            # print("reward after normalization: ", reward)
 
         elif self.reward_normalization == "scale_down":
             reward = reward / 10e30
@@ -598,6 +631,6 @@ class QueryOptEnv(core.Env):
         else:
             assert False
 
-        if reward > 2.00:
-            pdb.set_trace()
+        # if reward > 2.00:
+            # pdb.set_trace()
         return reward

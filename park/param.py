@@ -90,7 +90,8 @@ parser.add_argument('--qopt_only_attr_features', type=int, required=False,
                             default=1, help='')
 
 parser.add_argument('--qopt_reward_normalization', type=str, required=False,
-                            default='', help='type of reward normalization')
+                            default='min_max',
+                            help='type of reward normalization')
 parser.add_argument('--qopt_cost_model', type=str, required=False,
                             default='rowCount', help='')
 parser.add_argument('--qopt_dataset', type=str, required=False,
@@ -98,7 +99,7 @@ parser.add_argument('--qopt_dataset', type=str, required=False,
 parser.add_argument('--qopt_clear_cache', type=int, required=False,
                             default=1, help='')
 parser.add_argument('--qopt_recompute_fixed_planners', type=int, required=False,
-                            default=0, help='')
+                            default=1, help='')
 parser.add_argument('--qopt_test_size', type=float, required=False,
                             default=0.5, help='')
 parser.add_argument('--qopt_test_seed', type=int, required=False,
