@@ -11,6 +11,7 @@ import signal
 import numpy as np
 import json
 import networkx as nx
+from networkx.drawing.nx_agraph import write_dot,graphviz_layout
 import psutil
 import pdb
 import signal
@@ -18,6 +19,13 @@ import glob
 from sklearn.model_selection import train_test_split
 import wget
 import psycopg2
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+# from matplotlib import rc
+# rc("pdf", fonttype=42)
+from matplotlib.backends.backend_pdf import PdfPages
+import hashlib
 
 def find_available_port(orig_port):
     conns = psutil.net_connections()
@@ -27,6 +35,9 @@ def find_available_port(orig_port):
     while new_port in ports:
         new_port += 1
     return new_port
+
+def deterministic_hash(string):
+    return int(hashlib.sha1(str(string).encode("utf-8")).hexdigest(), 16)
 
 class QueryOptEnv(core.Env):
     """
@@ -81,7 +92,8 @@ class QueryOptEnv(core.Env):
         if config.qopt_viz:
             self.viz_ep = 0
             self.viz_output_dir = "./visualization/"
-            self.viz_title_tmp = "query: {query}, ep: {ep}, step: {step}"
+            self.viz_pdf = PdfPages(self.viz_output_dir + "test.pdf")
+            self.viz_title_tmp = "query: {query}, ep: {ep}, alg: {alg}"
 
         self.queries_initialized = False
 
@@ -237,8 +249,11 @@ class QueryOptEnv(core.Env):
         try:
             conn = psycopg2.connect(host="localhost",port=5432,dbname="imdb",
                     user="imdb",password="")
-        except:
-            print("connection crashed!")
+        except Exception as e:
+            import traceback
+            print("caught exception!")
+            print(e)
+            traceback.print_exc(e)
             conn_failed = True
             pdb.set_trace()
         if not conn_failed:
@@ -327,6 +342,44 @@ class QueryOptEnv(core.Env):
         # clear cache if needed
         return self.graph
 
+    def plot_join_order(self, info, pdf, ep=0):
+        '''
+        @pdf: opened pdf file to which plots will be appended.
+        '''
+        def get_node_name(tables):
+            name = ""
+            if len(tables) > 1:
+                name = str(deterministic_hash(str(tables)))[0:3]
+            else:
+                name = tables[0]
+                # shorten it
+                name = "".join([n[0] for n in name.split("_")])
+            return name
+
+        query_name = os.path.basename(info["queryName"])
+        # get relative cost baseline
+        min_cost = min([v for _,v in info["costs"].items()])
+        for alg, jo in info["joinOrders"].items():
+            G = nx.DiGraph()
+            root_node = jo["joinEdges"][-1][1]
+            root_node = str(deterministic_hash(str(root_node)))[0:3]
+            for edge in jo["joinEdges"]:
+                assert len(edge) == 2
+                edge0 = get_node_name(edge[0])
+                edge1 = get_node_name(edge[1])
+                G.add_edge(edge0, edge1)
+
+            title = self.viz_title_tmp.format(query=query_name,
+                    ep=self.viz_ep, alg=alg)
+            rel_cost = info["costs"][alg] / float(min_cost)
+            title += " cost: " + str(rel_cost)
+
+            plt.title(title)
+            pos = graphviz_layout(G, prog='dot')
+            nx.draw(G, pos, with_labels=True, arrows=True)
+            pdf.savefig()
+            plt.close()
+
     def step(self, action):
         '''
         @action: edge as represented in networkX e.g., (v1,v2)
@@ -374,49 +427,16 @@ class QueryOptEnv(core.Env):
         if done:
             info = self._send("getQueryInfo")
             info = json.loads(info)
+            # print(info["queryName"])
+            # print(info["costs"])
+            # min_cost = min([v for k,v in info["costs"].items()])
+            # for k,v in info["costs"].items():
+                # print(k, v, (v / min_cost))
+            # pdb.set_trace()
             # output episode based plots / viz
             if config.qopt_viz:
-                # FIXME: this reasoning should get a lot SIMPLER once we start
-                # tracking min/max scores in calcite
-                if not self.orig_graph is None:
-                    # only do the viz stuff now
-                    next_edge = len(self.orig_graph.edges())
-                    # joinOrders = info["joinOrders"]["RL"]
-                    joinOrders = info["joinOrders"]["LEFT_DEEP"]
-                    # now start adding stuff to it
-                    # TODO: describe algorithm to create joinTree + it depends
-                    # on the way we represent the graph in calcite
-                    import matplotlib
-                    matplotlib.use("Agg")
-                    import matplotlib.pyplot as plt
-                    from networkx.drawing.nx_agraph import write_dot,graphviz_layout
-
-                    G = nx.Graph()
-                    root_node = None
-                    for step, edge in enumerate(joinOrders):
-                        # chosen edge
-                        e1 = edge[0]
-                        e2 = edge[1]
-                        if root_node is None:
-                            root_node = e1
-                        G.add_edge(e1, next_edge)
-                        G.add_edge(e2, next_edge)
-                        next_edge += 1
-
-                        out_name = self.viz_output_dir + "test-" + \
-                            str(self.viz_ep) + "-" + str(step)
-                        write_dot(G, out_name + ".dot")
-                        title = self.viz_title_tmp.format(query="0",
-                                ep=self.viz_ep, step=str(step))
-
-                        plt.title(title)
-                        pos = graphviz_layout(G, prog='dot', root=root_node)
-                        nx.draw(G, pos, with_labels=True, arrows=True)
-                        plt.savefig(out_name + ".png")
-                        plt.close()
-
-                    self.viz_ep += 1
-                    pdb.set_trace()
+                self.plot_join_order(info, self.viz_pdf, self.viz_ep)
+                self.viz_ep += 1
 
         # TODO: need to make this more intuitive
         if config.qopt_final_reward:
@@ -441,6 +461,8 @@ class QueryOptEnv(core.Env):
         '''
         kills the java server started by subprocess, and all it's children.
         '''
+        if config.qopt_viz:
+            self.viz_pdf.close()
         os.killpg(os.getpgid(self.java_process.pid), signal.SIGTERM)
         print("killed the java server")
         exit(0)

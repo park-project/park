@@ -93,7 +93,7 @@ parser.add_argument('--qopt_reward_normalization', type=str, required=False,
                             default='min_max',
                             help='type of reward normalization')
 parser.add_argument('--qopt_cost_model', type=str, required=False,
-                            default='rowCount', help='')
+                            default='MM', help='')
 parser.add_argument('--qopt_dataset', type=str, required=False,
                             default='JOB', help='')
 parser.add_argument('--qopt_clear_cache', type=int, required=False,
