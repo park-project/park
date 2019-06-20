@@ -10,8 +10,6 @@ import os
 import signal
 import numpy as np
 import json
-import networkx as nx
-from networkx.drawing.nx_agraph import write_dot,graphviz_layout
 import psutil
 import pdb
 import signal
@@ -19,25 +17,9 @@ import glob
 from sklearn.model_selection import train_test_split
 import wget
 import psycopg2
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-# from matplotlib import rc
-# rc("pdf", fonttype=42)
-from matplotlib.backends.backend_pdf import PdfPages
-import hashlib
-
-def find_available_port(orig_port):
-    conns = psutil.net_connections()
-    ports = [c.laddr.port for c in conns]
-    new_port = orig_port
-
-    while new_port in ports:
-        new_port += 1
-    return new_port
-
-def deterministic_hash(string):
-    return int(hashlib.sha1(str(string).encode("utf-8")).hexdigest(), 16)
+# from utils.utils import *
+# import utils
+from .qopt_utils import *
 
 class QueryOptEnv(core.Env):
     """
@@ -93,7 +75,6 @@ class QueryOptEnv(core.Env):
             self.viz_ep = 0
             self.viz_output_dir = "./visualization/"
             self.viz_pdf = PdfPages(self.viz_output_dir + "test.pdf")
-            self.viz_title_tmp = "query: {query}, ep: {ep}, alg: {alg}"
 
         self.queries_initialized = False
 
@@ -342,44 +323,6 @@ class QueryOptEnv(core.Env):
         # clear cache if needed
         return self.graph
 
-    def plot_join_order(self, info, pdf, ep=0):
-        '''
-        @pdf: opened pdf file to which plots will be appended.
-        '''
-        def get_node_name(tables):
-            name = ""
-            if len(tables) > 1:
-                name = str(deterministic_hash(str(tables)))[0:3]
-            else:
-                name = tables[0]
-                # shorten it
-                name = "".join([n[0] for n in name.split("_")])
-            return name
-
-        query_name = os.path.basename(info["queryName"])
-        # get relative cost baseline
-        min_cost = min([v for _,v in info["costs"].items()])
-        for alg, jo in info["joinOrders"].items():
-            G = nx.DiGraph()
-            root_node = jo["joinEdges"][-1][1]
-            root_node = str(deterministic_hash(str(root_node)))[0:3]
-            for edge in jo["joinEdges"]:
-                assert len(edge) == 2
-                edge0 = get_node_name(edge[0])
-                edge1 = get_node_name(edge[1])
-                G.add_edge(edge0, edge1)
-
-            title = self.viz_title_tmp.format(query=query_name,
-                    ep=self.viz_ep, alg=alg)
-            rel_cost = info["costs"][alg] / float(min_cost)
-            title += " cost: " + str(rel_cost)
-
-            plt.title(title)
-            pos = graphviz_layout(G, prog='dot')
-            nx.draw(G, pos, with_labels=True, arrows=True)
-            pdf.savefig()
-            plt.close()
-
     def step(self, action):
         '''
         @action: edge as represented in networkX e.g., (v1,v2)
@@ -435,7 +378,7 @@ class QueryOptEnv(core.Env):
             # pdb.set_trace()
             # output episode based plots / viz
             if config.qopt_viz:
-                self.plot_join_order(info, self.viz_pdf, self.viz_ep)
+                plot_join_order(info, self.viz_pdf, self.viz_ep)
                 self.viz_ep += 1
 
         # TODO: need to make this more intuitive
@@ -492,6 +435,9 @@ class QueryOptEnv(core.Env):
 
     def get_current_query(self):
         return self.current_query
+
+    def get_current_query_name(self):
+        return self._send("getCurrentQueryName")
 
     def _observe(self):
         '''
@@ -656,3 +602,4 @@ class QueryOptEnv(core.Env):
         # if reward > 2.00:
             # pdb.set_trace()
         return reward
+
