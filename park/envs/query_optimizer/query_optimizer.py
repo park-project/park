@@ -20,6 +20,7 @@ import psycopg2
 # from utils.utils import *
 # import utils
 from .qopt_utils import *
+import getpass
 
 class QueryOptEnv(core.Env):
     """
@@ -228,8 +229,10 @@ class QueryOptEnv(core.Env):
 
         conn_failed = False
         try:
-            conn = psycopg2.connect(host="localhost",port=5432,dbname="imdb",
-                    user="imdb",password="")
+            # conn = psycopg2.connect(host="localhost",port=5432,dbname="imdb",
+                    # user="imdb",password="")
+            conn = psycopg2.connect(port=5432,dbname="imdb",
+                    user=getpass.getuser(),password="")
         except Exception as e:
             import traceback
             print("caught exception!")
