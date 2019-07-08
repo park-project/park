@@ -108,6 +108,8 @@ parser.add_argument('--qopt_num_execution_reps', type=int, required=False,
                             default=1000, help='')
 parser.add_argument('--qopt_max_execution_time', type=int, required=False,
                             default=1200, help='')
+parser.add_argument('--qopt_log_file', type=str, required=False,
+                            default="./java.log", help='')
 
 # -- Cache --
 parser.add_argument('--cache_trace', type=str, required=False, default='test',

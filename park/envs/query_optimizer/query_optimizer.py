@@ -38,12 +38,23 @@ class QueryOptEnv(core.Env):
         # logger.info("port = " + str(self.port))
         self._start_java_server()
 
-        context = zmq.Context()
+        # context = zmq.Context()
         #  Socket to talk to server
-        # logger.debug("Going to connect to calcite server")
-        self.socket = context.socket(zmq.PAIR)
+        # self.socket = context.socket(zmq.PAIR)
+
+        nIOthreads = 2                          # ____POLICY: set 2+: { 0: non-blocking, 1: blocking, 2: ...,  }
+        context = zmq.Context(nIOthreads)      # ____POLICY: set several IO-datapumps
+
+        self.socket  = context.socket(zmq.PAIR)
+        self.socket.setsockopt( zmq.LINGER,      0 )  # ____POLICY: set upon instantiations
+        self.socket.setsockopt( zmq.AFFINITY,    1 )  # ____POLICY: map upon IO-type thread
+        self.socket.setsockopt(zmq.RCVTIMEO, 300000)
+
         self.socket.connect("tcp://localhost:" + str(self.port))
         self.reward_normalization = config.qopt_reward_normalization
+
+        # self.poller = zmq.Poller()
+        # self.poller.register(self.socket, zmq.POLLIN) # POLLIN for recv
 
         # TODO: describe spaces
         self.graph = None
@@ -179,10 +190,7 @@ class QueryOptEnv(core.Env):
         # Check if docker is installed.
         cmd_string = "which {}".format(name)
         # which_pg_output = sp.check_output(cmd_string.split())
-        FNULL = open(os.devnull, 'w')
-        # compile_pr = sp.Popen("mvn package", shell=True,
-                # cwd=qopt_path, stdout=FNULL, stderr=FNULL,
-                # preexec_fn=os.setsid)
+        FNULL = open(config.qopt_log_file, 'w')
         process = sp.Popen(cmd_string.split(), shell=False, stdout=FNULL,
                 stderr=FNULL)
         FNULL.close()
@@ -366,11 +374,11 @@ class QueryOptEnv(core.Env):
         done = int(self._send("isDone"))
         info = None
 
-
         # print("action: {}, reward: {}, done: {}, info: {}".format(action,
             # reward, done, info))
         # pdb.set_trace()
         if done:
+            # print("DONE!!!")
             info = self._send("getQueryInfo")
             info = json.loads(info)
             # print(info["queryName"])
@@ -530,7 +538,7 @@ class QueryOptEnv(core.Env):
             )
 
         if not config.qopt_java_output:
-            FNULL = open(os.devnull, 'w')
+            FNULL = open(config.qopt_log_file, 'w')
             compile_pr = sp.Popen("mvn package", shell=True,
                     cwd=qopt_path, stdout=FNULL, stderr=FNULL,
                     preexec_fn=os.setsid)
@@ -543,11 +551,10 @@ class QueryOptEnv(core.Env):
         compile_pr.wait()
 
         if not config.qopt_java_output:
-            FNULL = open(os.devnull, 'w')
+            FNULL = open(config.qopt_log_file, 'w')
             self.java_process = sp.Popen(cmd, shell=True,
                     cwd=qopt_path, stdout=FNULL, stderr=FNULL,
                     preexec_fn=os.setsid)
-            FNULL.close()
         else:
             self.java_process = sp.Popen(cmd, shell=True,
                     cwd=qopt_path, preexec_fn=os.setsid)
@@ -557,8 +564,46 @@ class QueryOptEnv(core.Env):
     def _send(self, msg):
         """
         """
+        start = time.time()
         self.socket.send_string(msg)
-        ret = self.socket.recv()
+        # ret = self.socket.recv()
+        while True:
+            try:
+                ret = self.socket.recv()
+                if ret is not None:
+                    break
+            except Exception as e:
+                # print("waiting recv for: ", time.time()-start)
+                print(e)
+                print("waited forever for response from java")
+                pdb.set_trace()
+                pass
+
+        # finally:
+            # self.socket.close()
+            # self.context.term()
+
+        # while True:
+            # print("going to try again")
+            # if time.time() - start > 2.00:
+                # print("no reply for over 2 seconds")
+                # pdb.set_trace()
+            # ret = self.socket.recv(flags = zmq.NOBLOCK)
+            # if ret is not None:
+                # break
+            # else:
+                # time.sleep(0.00001)
+
+            # evts = self.poller.poll(10000) # wait *up to* one second for a message to
+            # if len(evts) > 0:
+                # print("msg arrivwd. receiving")
+                # ret = self.socket.recv(zmq.NOBLOCK)
+            # else:
+                # print("error: message timeout")
+                # # retry?
+                # print(msg)
+                # pdb.set_trace()
+
         ret = ret.decode("utf8")
         return ret
 
