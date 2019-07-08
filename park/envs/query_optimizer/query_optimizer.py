@@ -253,7 +253,7 @@ class QueryOptEnv(core.Env):
 
         # TODO: print plenty of warning messages: going to start docker,
         # docker's directory should have enough space - /var/lib/docker OR
-        # change it manually following instructions at >>>> .....
+        # change it manually following instructions at
 
         docker_dir = qopt_path + "/docker"
         docker_img_name = "pg"
@@ -573,11 +573,9 @@ class QueryOptEnv(core.Env):
                 if ret is not None:
                     break
             except Exception as e:
-                # print("waiting recv for: ", time.time()-start)
                 print(e)
                 print("waited forever for response from java")
                 pdb.set_trace()
-                pass
 
         # finally:
             # self.socket.close()
