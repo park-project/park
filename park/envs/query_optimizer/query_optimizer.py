@@ -22,6 +22,9 @@ import psycopg2
 from .qopt_utils import *
 import getpass
 
+class QueryOptError(Exception):
+    pass
+
 class QueryOptEnv(core.Env):
     """
     TODO: describe state, including the features for nodes and edges.
@@ -410,6 +413,7 @@ class QueryOptEnv(core.Env):
 
     def _handle_exit_signal(self, signum, frame):
         self.clean()
+        raise QueryOptError('From park, received signal ' + str(signum))
 
     def clean(self):
         '''
@@ -419,7 +423,7 @@ class QueryOptEnv(core.Env):
             self.viz_pdf.close()
         os.killpg(os.getpgid(self.java_process.pid), signal.SIGTERM)
         print("killed the java server")
-        exit(0)
+        # exit(0)
 
     def set(self, attr, val):
         '''
@@ -572,7 +576,7 @@ class QueryOptEnv(core.Env):
                 ret = self.socket.recv()
                 if ret is not None:
                     break
-            except Exception as e:
+            except zmq.error.Again as e:
                 print(e)
                 print("waited forever for response from java")
                 pdb.set_trace()
