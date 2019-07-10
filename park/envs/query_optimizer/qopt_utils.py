@@ -55,7 +55,12 @@ def plot_join_order(info, pdf, ep=0, title_suffix="", single_plot=True,
             est_card_pos = {}
             for k, v in pos.items():
                 est_card_pos[k] = (v[0], v[1]-25)
-                est_labels[k] = format_ints(G.nodes[k]["est_card"])
+                try:
+                    est_labels[k] = format_ints(G.nodes[k]["est_card"])
+                except:
+                    est_labels[k] = -1
+                    continue
+
             nx.draw_networkx_labels(G, est_card_pos, est_labels,
                     font_size=8, font_color='r')
 
@@ -63,7 +68,11 @@ def plot_join_order(info, pdf, ep=0, title_suffix="", single_plot=True,
             true_label_pos = {}
             for k, v in pos.items():
                 true_label_pos[k] = (v[0], v[1]+25)
-                true_labels[k] = format_ints(G.nodes[k]["true_card"])
+                try:
+                    true_labels[k] = format_ints(G.nodes[k]["true_card"])
+                except:
+                    true_labels[k] = -1
+
             nx.draw_networkx_labels(G, true_label_pos, true_labels,
                     font_size=8, font_color='g')
 
@@ -73,7 +82,10 @@ def plot_join_order(info, pdf, ep=0, title_suffix="", single_plot=True,
                 if len(G.nodes[n]["tables"]) == 1:
                     node_labels[n] = n
                 else:
-                    node_labels[n] = format_ints(G.nodes[n]["join_cost"])
+                    try:
+                        node_labels[n] = format_ints(G.nodes[n]["join_cost"])
+                    except:
+                        node_labels[n] = -1
 
             nx.draw_networkx_labels(G, pos, node_labels, font_size=8)
 
@@ -140,6 +152,12 @@ def plot_join_order(info, pdf, ep=0, title_suffix="", single_plot=True,
                 # except:
                     # join_cost = -1
                 # node_labels[node1] = join_cost
+
+            if not "joinCosts" in jo:
+                # print(edge)
+                # print(jo.keys())
+                # pdb.set_trace()
+                continue
             if true_cards is not None:
                 G.nodes[node0]["true_card"] = true_cards[" " + " ".join(edge[0])]
                 G.nodes[node1]["true_card"] = true_cards[" " + " ".join(edge[1])]
