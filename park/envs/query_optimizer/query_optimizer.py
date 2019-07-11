@@ -51,7 +51,7 @@ class QueryOptEnv(core.Env):
         self.socket  = context.socket(zmq.PAIR)
         self.socket.setsockopt( zmq.LINGER,      0 )  # ____POLICY: set upon instantiations
         self.socket.setsockopt( zmq.AFFINITY,    1 )  # ____POLICY: map upon IO-type thread
-        self.socket.setsockopt(zmq.RCVTIMEO, 300000)
+        self.socket.setsockopt(zmq.RCVTIMEO, 600000)
 
         self.socket.connect("tcp://localhost:" + str(self.port))
         self.reward_normalization = config.qopt_reward_normalization
@@ -577,9 +577,10 @@ class QueryOptEnv(core.Env):
                 if ret is not None:
                     break
             except zmq.error.Again as e:
-                print(e)
-                print("waited forever for response from java")
-                pdb.set_trace()
+                # print(e)
+                # print("waited forever for response from java")
+                # pdb.set_trace()
+                raise QueryOptError("fucking zmq error: Again")
 
         # finally:
             # self.socket.close()
