@@ -172,6 +172,7 @@ def plot_join_order(info, pdf, ep=0, title_suffix="", single_plot=True,
             if len(edge[1]) > 1:
                 G.nodes[node1]["join_cost"] = int(jo["joinCosts"][str(edge[1]).replace("'","")])
 
+        min_cost = max(min_cost, 0.0001)
         rel_cost = round(info["costs"][alg] / float(min_cost), 3)
         costK = str(round(info["costs"][alg]/1000)) + "K"
         if alg == "RL":
