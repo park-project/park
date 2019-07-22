@@ -240,10 +240,13 @@ class QueryOptEnv(core.Env):
 
         conn_failed = False
         try:
-            # conn = psycopg2.connect(host="localhost",port=5432,dbname="imdb",
-                    # user="imdb",password="")
-            conn = psycopg2.connect(port=5432,dbname="imdb",
-                    user=getpass.getuser(),password="")
+            os_user = getpass.getuser()
+            if os_user == "ubuntu":
+                conn = psycopg2.connect(port=5432,dbname="imdb",
+                        user=os_user,password="")
+            else:
+                conn = psycopg2.connect(host="localhost",port=5432,dbname="imdb",
+                        user="pari",password="")
         except Exception as e:
             import traceback
             print("caught exception!")
