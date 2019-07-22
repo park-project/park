@@ -400,8 +400,8 @@ class QueryOptEnv(core.Env):
             # so that this is done ONLY sometimes, i.e., if we set park to
             # noExec mode, then there will be no final reward
             if done:
-                if "RL" in info["dbmsRuntimes"]:
-                    reward = -info["dbmsRuntimes"]["RL"]
+                if "RL" in info["dbmsAllRuntimes"]:
+                    reward = -info["dbmsAllRuntimes"]["RL"][-1]
 
             # give no intermediate reward ONLY if final reward is ON.
             elif config.qopt_no_intermediate_reward:
