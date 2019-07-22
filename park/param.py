@@ -110,7 +110,7 @@ parser.add_argument('--qopt_max_execution_time', type=int, required=False,
                             default=1200, help='')
 parser.add_argument('--qopt_log_file', type=str, required=False,
                             default="./java.log", help='')
-parser.add_argument('--qopt_scan_cost_factor', type=float, default=0.0,
+parser.add_argument('--qopt_scan_cost_factor', type=float, default=0.2,
                     help="cost of scanning in base table for cost model")
 parser.add_argument('--qopt_use_index_nested_lj', type=int, required=False,
                             default=1,
