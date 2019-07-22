@@ -526,7 +526,7 @@ class QueryOptEnv(core.Env):
                 reps       = config.qopt_num_execution_reps,
                 max_exec   = config.qopt_max_execution_time,
                 recompute = config.qopt_recompute_fixed_planners,
-                nlj       = config.qopt_use_index_nested_jl,
+                nlj       = config.qopt_use_index_nested_lj,
                 scanCostFactor = config.qopt_scan_cost_factor)
         try:
             qopt_path = os.environ["QUERY_OPT_PATH"]
