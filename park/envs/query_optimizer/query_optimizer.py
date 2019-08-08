@@ -511,7 +511,7 @@ class QueryOptEnv(core.Env):
         -execOnDB {execOnDB} -clearCache {clearCache} \
         -recomputeFixedPlanners {recompute} -numExecutionReps {reps} \
         -maxExecutionTime {max_exec} -useIndexNestedLJ {nlj} \
-        -scanCostFactor {scanCostFactor}"'
+        -scanCostFactor {scanCostFactor} -getSqlToExecute {getSql}"'
         # FIXME: setting the java directory relative to the directory we are
         # executing it from?
         cmd = JAVA_EXEC_FORMAT.format(
@@ -530,7 +530,8 @@ class QueryOptEnv(core.Env):
                 max_exec   = config.qopt_max_execution_time,
                 recompute = config.qopt_recompute_fixed_planners,
                 nlj       = config.qopt_use_index_nested_lj,
-                scanCostFactor = config.qopt_scan_cost_factor)
+                scanCostFactor = config.qopt_scan_cost_factor,
+                getSql = config.qopt_get_sql)
         try:
             qopt_path = os.environ["QUERY_OPT_PATH"]
         except:

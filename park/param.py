@@ -98,6 +98,8 @@ parser.add_argument('--qopt_dataset', type=str, required=False,
                             default='JOB', help='')
 parser.add_argument('--qopt_clear_cache', type=int, required=False,
                             default=1, help='')
+parser.add_argument('--qopt_get_sql', type=int, required=False,
+                            default=0, help='')
 parser.add_argument('--qopt_recompute_fixed_planners', type=int, required=False,
                             default=1, help='')
 parser.add_argument('--qopt_test_size', type=float, required=False,
@@ -105,12 +107,12 @@ parser.add_argument('--qopt_test_size', type=float, required=False,
 parser.add_argument('--qopt_test_seed', type=int, required=False,
                             default=1234, help='')
 parser.add_argument('--qopt_num_execution_reps', type=int, required=False,
-                            default=2, help='')
+                            default=1, help='')
 parser.add_argument('--qopt_max_execution_time', type=int, required=False,
-                            default=1200, help='')
+                            default=1200, help='in seconds')
 parser.add_argument('--qopt_log_file', type=str, required=False,
                             default="./java.log", help='')
-parser.add_argument('--qopt_scan_cost_factor', type=float, default=0.2,
+parser.add_argument('--qopt_scan_cost_factor', type=float, default=0.02,
                     help="cost of scanning in base table for cost model")
 parser.add_argument('--qopt_use_index_nested_lj', type=int, required=False,
                             default=1,
