@@ -57,7 +57,7 @@ parser.add_argument('--warmup_delay', type=int, default=1000,
                     help='Executor warming up delay (milliseconds) (default: 1000)')
 
 # -- Query Optimizer --
-parser.add_argument('--qopt_java_output', type=int, default=1,
+parser.add_argument('--qopt_java_output', type=int, default=0,
                     help="should the java servers output be visible")
 # TODO: need to add more control for this
 parser.add_argument('--qopt_viz', type=int, default=0,
@@ -106,6 +106,9 @@ parser.add_argument('--qopt_test_size', type=float, required=False,
                             default=0.5, help='')
 parser.add_argument('--qopt_test_seed', type=int, required=False,
                             default=1234, help='')
+parser.add_argument('--qopt_test_cardinalities', type=int, required=False,
+                            default=1, help='Use the RL interface, or for cardinalities')
+
 parser.add_argument('--qopt_num_execution_reps', type=int, required=False,
                             default=1, help='')
 parser.add_argument('--qopt_max_execution_time', type=int, required=False,

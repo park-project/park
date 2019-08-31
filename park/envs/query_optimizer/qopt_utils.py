@@ -9,6 +9,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 import os
 import math
 import pdb
+import time
+import random
 
 def plot_join_order(info, pdf, ep=0, title_suffix="", single_plot=True,
         python_alg_name="RL", est_cards=None, true_cards=None):
@@ -204,12 +206,17 @@ def plot_join_order(info, pdf, ep=0, title_suffix="", single_plot=True,
         plt.close()
 
 def find_available_port(orig_port):
+    # randomly sleep here so parallel processes connecting aren't stuck on same
+    # port
+    time.sleep(random.randint(1,3))
     conns = psutil.net_connections()
     ports = [c.laddr.port for c in conns]
     new_port = orig_port
 
     while new_port in ports:
-        new_port += 1
+        new_port += random.randint(1,10)
+
+    print("new port: ", new_port)
     return new_port
 
 def deterministic_hash(string):

@@ -40,6 +40,7 @@ class QueryOptEnv(core.Env):
         # start calcite + java server
         # logger.info("port = " + str(self.port))
         self._start_java_server()
+        print("start java server succeeded")
 
         # context = zmq.Context()
         #  Socket to talk to server
@@ -54,6 +55,7 @@ class QueryOptEnv(core.Env):
         self.socket.setsockopt(zmq.RCVTIMEO, 6000000)
 
         self.socket.connect("tcp://localhost:" + str(self.port))
+        print("self.socket.connect succeeded")
         self.reward_normalization = config.qopt_reward_normalization
 
         # self.poller = zmq.Poller()
@@ -92,6 +94,22 @@ class QueryOptEnv(core.Env):
             self.viz_pdf = PdfPages(self.viz_output_dir + "test.pdf")
 
         self.queries_initialized = False
+
+    def compute_join_order_loss(self, query_dict, true_cardinalities,
+            est_cardinalities, baseline_join_alg):
+        '''
+        '''
+        self.initialize_queries(query_dict)
+        print("in park: compute_join_order_loss")
+        self.initialize_cardinalities(est_cardinalities)
+        self._send("startTestCardinalities")
+        print("startTestCardinalities done")
+        # java will compute optimal orderings for the estimated cardinalities
+
+        self.initialize_cardinalities(true_cardinalities)
+        print("true cardinalities initialized")
+
+        pdb.set_trace()
 
     def initialize_cardinalities(self, cardinalities):
         '''
@@ -511,9 +529,13 @@ class QueryOptEnv(core.Env):
         -execOnDB {execOnDB} -clearCache {clearCache} \
         -recomputeFixedPlanners {recompute} -numExecutionReps {reps} \
         -maxExecutionTime {max_exec} -useIndexNestedLJ {nlj} \
-        -scanCostFactor {scanCostFactor} -getSqlToExecute {getSql}"'
+        -scanCostFactor {scanCostFactor} -getSqlToExecute {getSql} \
+        -testCardinalities {testCardinalities}"'
         # FIXME: setting the java directory relative to the directory we are
         # executing it from?
+        if config.qopt_test_cardinalities:
+            print("WARNING: test cardinalities mode on")
+
         cmd = JAVA_EXEC_FORMAT.format(
                 query = config.qopt_query,
                 port  = str(self.port),
@@ -531,7 +553,8 @@ class QueryOptEnv(core.Env):
                 recompute = config.qopt_recompute_fixed_planners,
                 nlj       = config.qopt_use_index_nested_lj,
                 scanCostFactor = config.qopt_scan_cost_factor,
-                getSql = config.qopt_get_sql)
+                getSql = config.qopt_get_sql,
+                testCardinalities = config.qopt_test_cardinalities)
         try:
             qopt_path = os.environ["QUERY_OPT_PATH"]
         except:
