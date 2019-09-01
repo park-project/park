@@ -113,6 +113,11 @@ class QueryOptEnv(core.Env):
             way to deal with aliases.
         '''
         start = time.time()
+        # qkey = "175480916186673679566421275341793330755518609530"
+        # join_key = "cast_info info_type3 info_type4 kind_typeepisode\
+# movie_infoDrama movie_infoGreek namef role_typecinematographer title1990"
+
+        # pdb.set_trace()
         self.initialize_queries(query_dict)
         self.initialize_cardinalities(est_cardinalities)
         self._send("startTestCardinalities")
