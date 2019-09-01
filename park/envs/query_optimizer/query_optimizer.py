@@ -98,18 +98,42 @@ class QueryOptEnv(core.Env):
     def compute_join_order_loss(self, query_dict, true_cardinalities,
             est_cardinalities, baseline_join_alg):
         '''
+        @query_dict: str : str.
+            key: should be a unique name for the query
+            value: will be the corresponding sql string.
+        @true_cardinalities / est_cardinalities:
+            key: same as the ones for query dict.
+            value: dictionary, specifying cardinality of each subquery
+                key: sorted list of [table_1_key, table_2_key, ...table_n_key]
+                val: cardinality (double)
+                In order to handle aliases (this information is lost when
+                processing in calcite), each table_key is table name +
+                first predicate (if no predicate present on that table, then just "")
+            FIXME: this does not handle many edge cases, and we need a better
+            way to deal with aliases.
         '''
+        start = time.time()
         self.initialize_queries(query_dict)
-        print("in park: compute_join_order_loss")
         self.initialize_cardinalities(est_cardinalities)
         self._send("startTestCardinalities")
-        print("startTestCardinalities done")
+        # print("startTestCardinalities done")
         # java will compute optimal orderings for the estimated cardinalities
 
         self.initialize_cardinalities(true_cardinalities)
-        print("true cardinalities initialized")
+        est_costs = json.loads(self._send("getEstCardinalityCosts"))
+        opt_costs = json.loads(self._send("getOptCardinalityCosts"))
 
-        pdb.set_trace()
+        # sanity check
+        for k in query_dict:
+            try:
+                assert k in est_costs
+                assert k in opt_costs
+            except:
+                print("key not found in costs returned from java")
+                print(k)
+                pdb.set_trace()
+
+        return est_costs, opt_costs
 
     def initialize_cardinalities(self, cardinalities):
         '''
