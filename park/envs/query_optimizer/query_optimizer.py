@@ -594,24 +594,26 @@ class QueryOptEnv(core.Env):
         # Important to use preexec_fn=os.setsid, as this puts the java process
         # and all it's children into a new groupid, which can be killed in
         # clean without shutting down the current python process
-        if not os.path.exists(qopt_path + "/pg.json"):
-            wget.download(
-                url="https://parimarjan.github.io/dbs/pg.json",
-                out=qopt_path + "/pg.json"
-            )
 
-        if not config.qopt_java_output:
-            FNULL = open(config.qopt_log_file, 'w')
-            compile_pr = sp.Popen("mvn package", shell=True,
-                    cwd=qopt_path, stdout=FNULL, stderr=FNULL,
-                    preexec_fn=os.setsid)
-            FNULL.close()
-        else:
-            compile_pr = sp.Popen("mvn package", shell=True,
-                    cwd=qopt_path,
-                    preexec_fn=os.setsid)
+        # FIXME: update this.
+        # if not os.path.exists(qopt_path + "/pg.json"):
+            # wget.download(
+                # url="https://parimarjan.github.io/dbs/pg.json",
+                # out=qopt_path + "/pg.json"
+            # )
 
-        compile_pr.wait()
+        # FIXME: always assume it is compiled
+        # if not config.qopt_java_output:
+            # FNULL = open(config.qopt_log_file, 'w')
+            # compile_pr = sp.Popen("mvn package", shell=True,
+                    # cwd=qopt_path, stdout=FNULL, stderr=FNULL,
+                    # preexec_fn=os.setsid)
+            # FNULL.close()
+        # else:
+            # compile_pr = sp.Popen("mvn package", shell=True,
+                    # cwd=qopt_path,
+                    # preexec_fn=os.setsid)
+        # compile_pr.wait()
 
         if not config.qopt_java_output:
             FNULL = open(config.qopt_log_file, 'w')
@@ -621,8 +623,9 @@ class QueryOptEnv(core.Env):
         else:
             self.java_process = sp.Popen(cmd, shell=True,
                     cwd=qopt_path, preexec_fn=os.setsid)
+
         # FIXME: prob not required
-        time.sleep(2)
+        time.sleep(0.5)
 
     def _send(self, msg):
         """
