@@ -564,6 +564,7 @@ class QueryOptEnv(core.Env):
         self.action_space = spaces.EdgeInGraph()
 
     def _start_java_server(self):
+        print("_start_java_server")
         JAVA_EXEC_FORMAT = 'mvn -e exec:java -Dexec.mainClass=Main \
         -Dexec.args="-port {port} -train {train} \
         -lopt {lopt} -exhaustive {exh} -leftDeep {ld} -python 1 \
@@ -616,17 +617,17 @@ class QueryOptEnv(core.Env):
             # )
 
         # FIXME: always assume it is compiled
-        if not config.qopt_java_output:
-            FNULL = open(config.qopt_log_file, 'w')
-            compile_pr = sp.Popen("mvn package", shell=True,
-                    cwd=qopt_path, stdout=FNULL, stderr=FNULL,
-                    preexec_fn=os.setsid)
-            FNULL.close()
-        else:
-            compile_pr = sp.Popen("mvn package", shell=True,
-                    cwd=qopt_path,
-                    preexec_fn=os.setsid)
-        compile_pr.wait()
+        # if not config.qopt_java_output:
+            # FNULL = open(config.qopt_log_file, 'w')
+            # compile_pr = sp.Popen("mvn package", shell=True,
+                    # cwd=qopt_path, stdout=FNULL, stderr=FNULL,
+                    # preexec_fn=os.setsid)
+            # FNULL.close()
+        # else:
+            # compile_pr = sp.Popen("mvn package", shell=True,
+                    # cwd=qopt_path,
+                    # preexec_fn=os.setsid)
+        # compile_pr.wait()
 
         if not config.qopt_java_output:
             FNULL = open(config.qopt_log_file, 'w')
