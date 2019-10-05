@@ -263,7 +263,7 @@ class QueryOptEnv(core.Env):
             # user's responsibility
             print("{} is not installed. Please install docker before \
                     proceeding".format(name))
-            env.clean()
+            self.clean()
 
     def _install_dependencies(self):
         """
@@ -348,7 +348,7 @@ class QueryOptEnv(core.Env):
         if ret_code != 0:
             print("something bad happened when we tried to start docker container")
             print("got ret code: ", ret_code)
-            env.clean()
+            self.clean()
 
         time.sleep(2)
         # need to ensure that we psql has started in the container. If this is
