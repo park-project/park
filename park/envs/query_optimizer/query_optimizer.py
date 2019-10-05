@@ -20,6 +20,7 @@ import psycopg2
 # from utils.utils import *
 # import utils
 from .qopt_utils import *
+from .pg_cost import *
 import getpass
 
 class QueryOptError(Exception):
@@ -95,8 +96,16 @@ class QueryOptEnv(core.Env):
 
         self.queries_initialized = False
 
+    def _compute_join_order_loss_pg(self, query_dict, true_cardinalities,
+            est_cardinalities):
+        print("_compute_join_order_loss_pg")
+        for qname, query in query_dict.items():
+            compute_join_order_loss_pg_single(query, true_cardinalities[qname],
+                    est_cardinalities[qname])
+            pdb.set_trace()
+
     def compute_join_order_loss(self, query_dict, true_cardinalities,
-            est_cardinalities, baseline_join_alg):
+            est_cardinalities, baseline_join_alg, postgres=False):
         '''
         @query_dict: str : str.
             key: should be a unique name for the query
@@ -113,6 +122,10 @@ class QueryOptEnv(core.Env):
             way to deal with aliases.
         '''
         start = time.time()
+        if postgres:
+            return self._compute_join_order_loss_pg(query_dict,
+                    true_cardinalities, est_cardinalities)
+
         # qkey = "175480916186673679566421275341793330755518609530"
         # join_key = "cast_info info_type3 info_type4 kind_typeepisode\
 # movie_infoDrama movie_infoGreek namef role_typecinematographer title1990"
