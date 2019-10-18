@@ -27,10 +27,10 @@ register(
     entry_point='park.envs.congestion_control:CongestionControlEnv',
 )
 
-register(
-    env_id='spark',
-    entry_point='park.envs.spark:SparkEnv',
-)
+# register(
+#     env_id='spark',  # under maintenance
+#     entry_point='park.envs.spark:SparkEnv',
+# )
 
 register(
     env_id='spark_sim',
