@@ -99,10 +99,15 @@ class QueryOptEnv(core.Env):
     def _compute_join_order_loss_pg(self, query_dict, true_cardinalities,
             est_cardinalities):
         print("_compute_join_order_loss_pg")
+        est_costs = {}
+        opt_costs = {}
         for qname, query in query_dict.items():
-            compute_join_order_loss_pg_single(query, true_cardinalities[qname],
+            est, opt = compute_join_order_loss_pg_single(query, true_cardinalities[qname],
                     est_cardinalities[qname])
-            pdb.set_trace()
+            est_costs[qname] = est
+            opt_costs[qname] = opt
+
+        return est_costs, opt_costs
 
     def compute_join_order_loss(self, query_dict, true_cardinalities,
             est_cardinalities, baseline_join_alg, postgres=False):
