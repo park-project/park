@@ -1,6 +1,6 @@
 import psycopg2 as pg
 import getpass
-from sql_rep.utils import *
+from .utils import *
 
 import pdb
 
