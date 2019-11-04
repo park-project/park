@@ -22,6 +22,8 @@ import psycopg2
 from .qopt_utils import *
 from .pg_cost import *
 import getpass
+import multiprocessing
+from multiprocessing import Pool
 
 class QueryOptError(Exception):
     pass
@@ -31,81 +33,91 @@ class QueryOptEnv(core.Env):
     TODO: describe state, including the features for nodes and edges.
     """
     def __init__(self):
-        signal.signal(signal.SIGINT, self._handle_exit_signal)
-        signal.signal(signal.SIGTERM, self._handle_exit_signal)
         self.base_dir = None    # will be set by _install_dependencies
-        self._install_dependencies()
-        # original port:
-        self.port = find_available_port(config.qopt_port)
-
         # start calcite + java server
-        # logger.info("port = " + str(self.port))
-        self._start_java_server()
-        print("start java server succeeded")
+        self.use_java_backend = config.qopt_use_java
 
-        # context = zmq.Context()
-        #  Socket to talk to server
-        # self.socket = context.socket(zmq.PAIR)
+        if self.use_java_backend:
+            # original port:
+            self.port = find_available_port(config.qopt_port)
+            # this is only needed in the java backend case
+            signal.signal(signal.SIGINT, self._handle_exit_signal)
+            signal.signal(signal.SIGTERM, self._handle_exit_signal)
+            self._start_java_server()
+            self._install_dependencies()
+            print("start java server succeeded")
 
-        nIOthreads = 2                          # ____POLICY: set 2+: { 0: non-blocking, 1: blocking, 2: ...,  }
-        context = zmq.Context(nIOthreads)      # ____POLICY: set several IO-datapumps
 
-        self.socket  = context.socket(zmq.PAIR)
-        self.socket.setsockopt( zmq.LINGER,      0 )  # ____POLICY: set upon instantiations
-        self.socket.setsockopt( zmq.AFFINITY,    1 )  # ____POLICY: map upon IO-type thread
-        self.socket.setsockopt(zmq.RCVTIMEO, 6000000)
+            nIOthreads = 2                          # ____POLICY: set 2+: { 0: non-blocking, 1: blocking, 2: ...,  }
+            context = zmq.Context(nIOthreads)      # ____POLICY: set several IO-datapumps
 
-        self.socket.connect("tcp://localhost:" + str(self.port))
-        print("self.socket.connect succeeded")
-        self.reward_normalization = config.qopt_reward_normalization
+            self.socket  = context.socket(zmq.PAIR)
+            self.socket.setsockopt( zmq.LINGER,      0 )  # ____POLICY: set upon instantiations
+            self.socket.setsockopt( zmq.AFFINITY,    1 )  # ____POLICY: map upon IO-type thread
+            self.socket.setsockopt(zmq.RCVTIMEO, 6000000)
+            self.socket.connect("tcp://localhost:" + str(self.port))
+            print("self.socket.connect succeeded")
+            self.reward_normalization = config.qopt_reward_normalization
 
-        # self.poller = zmq.Poller()
-        # self.poller.register(self.socket, zmq.POLLIN) # POLLIN for recv
+            # self.poller = zmq.Poller()
+            # self.poller.register(self.socket, zmq.POLLIN) # POLLIN for recv
 
-        # TODO: describe spaces
-        self.graph = None
-        self.action_space = None
-        # here, we specify the edge to choose next to calcite using the
-        # position in the edge array
-        # this will be updated every time we use _observe
-        self._edge_pos_map = None
+            # TODO: describe spaces
+            self.graph = None
+            self.action_space = None
+            # here, we specify the edge to choose next to calcite using the
+            # position in the edge array
+            # this will be updated every time we use _observe
+            self._edge_pos_map = None
 
-        # will store _min_reward / _max_reward for each unique query
-        # will map query: (_min_reward, _max_reward)
-        self.reward_mapper = {}
-        # these values will get updated in reset.
-        self._min_reward = None
-        self._max_reward = None
+            # will store _min_reward / _max_reward for each unique query
+            # will map query: (_min_reward, _max_reward)
+            self.reward_mapper = {}
+            # these values will get updated in reset.
+            self._min_reward = None
+            self._max_reward = None
 
-        # self.query_set = self._send("getCurQuerySet")
-        self.attr_count = int(self._send("getAttrCount"))
+            # self.query_set = self._send("getCurQuerySet")
+            self.attr_count = int(self._send("getAttrCount"))
 
-        self.current_query = None
+            self.current_query = None
 
-        # setup space with the new graph
-        self._setup_space()
+            # setup space with the new graph
+            self._setup_space()
 
-        # more experimental stuff
+            # more experimental stuff
 
-        # original graph used to denote state
-        self.orig_graph = None
-        if config.qopt_viz:
-            self.viz_ep = 0
-            self.viz_output_dir = "./visualization/"
-            self.viz_pdf = PdfPages(self.viz_output_dir + "test.pdf")
+            # original graph used to denote state
+            self.orig_graph = None
+            if config.qopt_viz:
+                self.viz_ep = 0
+                self.viz_output_dir = "./visualization/"
+                self.viz_pdf = PdfPages(self.viz_output_dir + "test.pdf")
 
-        self.queries_initialized = False
+            self.queries_initialized = False
 
     def _compute_join_order_loss_pg(self, query_dict, true_cardinalities,
             est_cardinalities):
         print("_compute_join_order_loss_pg")
         est_costs = {}
         opt_costs = {}
-        for qname, query in query_dict.items():
-            est, opt = compute_join_order_loss_pg_single(query, true_cardinalities[qname],
-                    est_cardinalities[qname])
-            est_costs[qname] = est
-            opt_costs[qname] = opt
+        qnames = [qn for qn in query_dict]
+        num_processes = multiprocessing.cpu_count()
+        with Pool(processes=num_processes) as pool:
+            args = [(query_dict[qname], true_cardinalities[qname],
+                est_cardinalities[qname]) for
+                i, qname in enumerate(qnames)]
+            costs = pool.starmap(compute_join_order_loss_pg_single, args)
+
+        # non-multiprocess version, used for debugging
+        # costs = []
+        # for i, qname in enumerate(qnames):
+            # costs.append(compute_join_order_loss_pg_single(query_dict[qname],
+                    # true_cardinalities[qname], est_cardinalities[qname]))
+
+        for i, (est, opt) in enumerate(costs):
+            est_costs[qnames[i]] = est
+            opt_costs[qnames[i]] = opt
 
         return est_costs, opt_costs
 
@@ -489,9 +501,9 @@ class QueryOptEnv(core.Env):
         '''
         if config.qopt_viz:
             self.viz_pdf.close()
-        os.killpg(os.getpgid(self.java_process.pid), signal.SIGTERM)
-        print("killed the java server")
-        # exit(0)
+        if self.use_java_backend:
+            os.killpg(os.getpgid(self.java_process.pid), signal.SIGTERM)
+            print("killed the java server")
 
     def set(self, attr, val):
         '''
@@ -731,7 +743,5 @@ class QueryOptEnv(core.Env):
         else:
             assert False
 
-        # if reward > 2.00:
-            # pdb.set_trace()
         return reward
 

@@ -14,17 +14,17 @@ PG_HINT_JOINS = {}
 PG_HINT_JOINS["Nested Loop"] = "NestLoop"
 PG_HINT_JOINS["Hash Join"] = "HashJoin"
 PG_HINT_JOINS["Merge Join"] = "MergeJoin"
+MAX_JOINS = 16
 
-
-def _get_cost(sql, con):
+def _get_cost(sql, cur):
     assert "explain" in sql
-    cur = con.cursor()
+    # cur = con.cursor()
     cur.execute(sql)
-    explain = cur.fetchone()[0][0]
-    all_costs = extract_values(explain, "Total Cost")
+    explain = cur.fetchall()
+    all_costs = extract_values(explain[0][0][0], "Total Cost")
     cost = max(all_costs)
-    cur.close()
-    return cost
+    # cur.close()
+    return cost, explain
 
 def _gen_pg_hint_cards(cards):
     '''
@@ -46,7 +46,7 @@ def _gen_pg_hint_join(join_ops):
         join_str += join_line + "\n"
     return join_str
 
-def get_pg_join_order(sql, join_graph, con):
+def get_pg_join_order(join_graph, explain):
     '''
     Ryan's implementation.
     '''
@@ -82,12 +82,12 @@ def get_pg_join_order(sql, join_graph, con):
 
         return __extract_jo(plan["Plans"][0])
 
-    cursor = con.cursor()
-    cursor.execute(sql)
-    exp_output = cursor.fetchall()
-    cursor.close()
+    # cursor = con.cursor()
+    # cursor.execute(sql)
+    # exp_output = cursor.fetchall()
+    # cursor.close()
 
-    return __extract_jo(exp_output[0][0][0]["Plan"]), physical_join_ops
+    return __extract_jo(explain[0][0][0]["Plan"]), physical_join_ops
 
 def _get_modified_sql(sql, cardinalities, join_ops):
     '''
@@ -138,25 +138,56 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     else:
         con = pg.connect(host="localhost",port=5432,dbname="imdb",
                 user="pari",password="")
-
+    # adds the est cardinalities as a comment to the modified sql
     est_card_sql = _get_modified_sql(query, est_cardinalities, None)
 
     # find join order
-    join_order_sql, join_ops = get_pg_join_order(est_card_sql, join_graph, con)
-    est_opt_sql = nx_graph_to_query(join_graph, from_clause=join_order_sql)
+    cursor = con.cursor()
+    cursor.execute("SET geqo_threshold = {}".format(MAX_JOINS))
+    cursor.execute("SET join_collapse_limit = {}".format(MAX_JOINS))
+    cursor.execute("SET from_collapse_limit = {}".format(MAX_JOINS))
+    cursor.execute(est_card_sql)
+    explain = cursor.fetchall()
+    est_join_order_sql, est_join_ops = get_pg_join_order(join_graph,
+            explain)
+
+    est_opt_sql = nx_graph_to_query(join_graph,
+            from_clause=est_join_order_sql)
     # add the join ops etc. information
     est_opt_sql = _get_modified_sql(est_opt_sql, true_cardinalities,
-            join_ops)
-    est_cost = _get_cost(est_opt_sql, con)
+            est_join_ops)
+    cursor.execute("SET join_collapse_limit = 1")
+    cursor.execute("SET from_collapse_limit = 1")
+    est_cost, est_explain = _get_cost(est_opt_sql, cursor)
+
+    # debug mode
+    debug_order, debug_ops = get_pg_join_order(join_graph, est_explain)
+
+    # FIXME: this should work after we use leading(...) syntax
+    # assert debug_order == est_join_order_sql
+    # if debug_order != est_join_order_sql:
+        # print("order not exact match")
+        # print(debug_order)
+        # print(est_join_order_sql)
+        # pdb.set_trace()
+
     # this would not use cross join syntax, so should work fine with
     # join_collapse_limit = 1 as well.
     opt_sql = _get_modified_sql(query, true_cardinalities, None)
-    opt_cost = _get_cost(opt_sql, con)
+
+    cursor.execute("SET join_collapse_limit = {}".format(MAX_JOINS))
+    cursor.execute("SET from_collapse_limit = {}".format(MAX_JOINS))
+    opt_cost, opt_explain = _get_cost(opt_sql, cursor)
+
+    # FIXME: temporary
     if est_cost < opt_cost:
+        # print(est_cost, opt_cost, opt_cost - est_cost)
+        # pdb.set_trace()
         est_cost = opt_cost
 
     # print("est_cost: {}, opt_cost: {}, diff: {}".format(est_cost, opt_cost,
         # est_cost-opt_cost))
+    cursor.close()
     con.close()
     return est_cost, opt_cost
 
