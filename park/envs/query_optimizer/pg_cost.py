@@ -10,6 +10,7 @@ PG_HINT_CMNT_TMP = '''/*+
 '''
 PG_HINT_JOIN_TMP = "{JOIN_TYPE} ({TABLES})"
 PG_HINT_CARD_TMP = "Rows ({TABLES} #{CARD})"
+PG_HINT_LEADING_TMP = "Leading ({JOIN_ORDER})"
 PG_HINT_JOINS = {}
 PG_HINT_JOINS["Nested Loop"] = "NestLoop"
 PG_HINT_JOINS["Hash Join"] = "HashJoin"
@@ -33,7 +34,8 @@ def _gen_pg_hint_cards(cards):
     for aliases, card in cards.items():
         card_line = PG_HINT_CARD_TMP.format(TABLES = aliases,
                                             CARD = card)
-        card_str += card_line + "\n"
+        # card_str += card_line + "\n"
+        card_str += " "
     return card_str
 
 def _gen_pg_hint_join(join_ops):
@@ -43,8 +45,52 @@ def _gen_pg_hint_join(join_ops):
     for tables, join_op in join_ops.items():
         join_line = PG_HINT_JOIN_TMP.format(TABLES = tables,
                                             JOIN_TYPE = PG_HINT_JOINS[join_op])
-        join_str += join_line + "\n"
+        # join_str += join_line + "\n"
+        join_str += join_line + " "
     return join_str
+
+
+def get_leading_hint(join_graph, explain):
+    '''
+    Ryan's implementation.
+    '''
+    def __extract_jo(plan):
+        if plan["Node Type"] in join_types:
+            left = list(extract_aliases(plan["Plans"][0], jg=join_graph))
+            right = list(extract_aliases(plan["Plans"][1], jg=join_graph))
+
+            if len(left) == 1 and len(right) == 1:
+                left_alias = left[0][left[0].lower().find("as")+3:]
+                right_alias = right[0][right[0].lower().find("as")+3:]
+                return left_alias +  " " + right_alias
+
+            if len(left) == 1:
+                left_alias = left[0][left[0].lower().find("as")+3:]
+                return left_alias + " (" + __extract_jo(plan["Plans"][1]) + ")"
+
+            if len(right) == 1:
+                right_alias = right[0][right[0].lower().find(" as ")+4:]
+                return "(" + __extract_jo(plan["Plans"][0]) + ") " + right_alias
+
+            return ("(" + __extract_jo(plan["Plans"][0])
+                    + ") ("
+                    + __extract_jo(plan["Plans"][1]) + ")")
+
+        return __extract_jo(plan["Plans"][0])
+
+        # FIXME: temporary hack
+        # if "mii1.info " in query:
+            # query = query.replace("mii1.info ", "mii1.info::float")
+        # if "mii2.info " in query:
+            # query = query.replace("mii2.info ", "mii2.info::float")
+
+        # if "mii1.info)" in query:
+            # query = query.replace("mii1.info)", "mii1.info::float)")
+        # if "mii2.info)" in query:
+            # query = query.replace("mii2.info)", "mii2.info::float)")
+
+    jo = __extract_jo(explain[0][0][0]["Plan"])
+    return PG_HINT_LEADING_TMP.format(JOIN_ORDER = jo)
 
 def get_pg_join_order(join_graph, explain):
     '''
@@ -82,14 +128,10 @@ def get_pg_join_order(join_graph, explain):
 
         return __extract_jo(plan["Plans"][0])
 
-    # cursor = con.cursor()
-    # cursor.execute(sql)
-    # exp_output = cursor.fetchall()
-    # cursor.close()
-
     return __extract_jo(explain[0][0][0]["Plan"]), physical_join_ops
 
-def _get_modified_sql(sql, cardinalities, join_ops):
+def _get_modified_sql(sql, cardinalities, join_ops,
+        leading_hint):
     '''
     @cardinalities: dict
     @join_ops: dict
@@ -108,9 +150,13 @@ def _get_modified_sql(sql, cardinalities, join_ops):
     if join_ops is not None:
         join_str = _gen_pg_hint_join(join_ops)
         comment_str += join_str
+    if leading_hint is not None:
+        # comment_str += leading_hint + "\n"
+        comment_str += leading_hint
 
     pg_hint_str = PG_HINT_CMNT_TMP.format(COMMENT=comment_str)
-    sql = pg_hint_str + "\n" + sql
+    # sql = pg_hint_str + "\n" + sql
+    sql = pg_hint_str + sql
     return sql
 
 def compute_join_order_loss_pg_single(query, true_cardinalities,
@@ -130,6 +176,15 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
 
     '''
     # set est cardinalities
+    if "mii1.info " in query:
+        query = query.replace("mii1.info ", "mii1.info::float")
+    if "mii2.info " in query:
+        query = query.replace("mii2.info ", "mii2.info::float")
+    if "mii1.info)" in query:
+        query = query.replace("mii1.info)", "mii1.info::float)")
+    if "mii2.info)" in query:
+        query = query.replace("mii2.info)", "mii2.info::float)")
+
     join_graph = extract_join_graph(query)
     os_user = getpass.getuser()
     if os_user == "ubuntu":
@@ -139,7 +194,8 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         con = pg.connect(host="localhost",port=5432,dbname="imdb",
                 user="pari",password="")
     # adds the est cardinalities as a comment to the modified sql
-    est_card_sql = _get_modified_sql(query, est_cardinalities, None)
+    est_card_sql = _get_modified_sql(query, est_cardinalities, None,
+            None)
 
     # find join order
     cursor = con.cursor()
@@ -150,12 +206,16 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     explain = cursor.fetchall()
     est_join_order_sql, est_join_ops = get_pg_join_order(join_graph,
             explain)
+    leading_hint = get_leading_hint(join_graph, explain)
+    print(leading_hint)
+    # leading_hint = None
+    # pdb.set_trace()
 
     est_opt_sql = nx_graph_to_query(join_graph,
             from_clause=est_join_order_sql)
     # add the join ops etc. information
     est_opt_sql = _get_modified_sql(est_opt_sql, true_cardinalities,
-            est_join_ops)
+            est_join_ops, leading_hint)
     cursor.execute("SET join_collapse_limit = 1")
     cursor.execute("SET from_collapse_limit = 1")
     est_cost, est_explain = _get_cost(est_opt_sql, cursor)
@@ -165,15 +225,15 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
 
     # FIXME: this should work after we use leading(...) syntax
     # assert debug_order == est_join_order_sql
-    # if debug_order != est_join_order_sql:
-        # print("order not exact match")
-        # print(debug_order)
-        # print(est_join_order_sql)
-        # pdb.set_trace()
+    if debug_order != est_join_order_sql:
+        print("order not exact match")
+        print(debug_order)
+        print(est_join_order_sql)
+        pdb.set_trace()
 
     # this would not use cross join syntax, so should work fine with
     # join_collapse_limit = 1 as well.
-    opt_sql = _get_modified_sql(query, true_cardinalities, None)
+    opt_sql = _get_modified_sql(query, true_cardinalities, None, None)
 
     cursor.execute("SET join_collapse_limit = {}".format(MAX_JOINS))
     cursor.execute("SET from_collapse_limit = {}".format(MAX_JOINS))

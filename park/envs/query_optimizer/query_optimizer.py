@@ -102,18 +102,18 @@ class QueryOptEnv(core.Env):
         est_costs = {}
         opt_costs = {}
         qnames = [qn for qn in query_dict]
-        num_processes = multiprocessing.cpu_count()
-        with Pool(processes=num_processes) as pool:
-            args = [(query_dict[qname], true_cardinalities[qname],
-                est_cardinalities[qname]) for
-                i, qname in enumerate(qnames)]
-            costs = pool.starmap(compute_join_order_loss_pg_single, args)
+        # num_processes = multiprocessing.cpu_count()
+        # with Pool(processes=num_processes) as pool:
+            # args = [(query_dict[qname], true_cardinalities[qname],
+                # est_cardinalities[qname]) for
+                # i, qname in enumerate(qnames)]
+            # costs = pool.starmap(compute_join_order_loss_pg_single, args)
 
         # non-multiprocess version, used for debugging
-        # costs = []
-        # for i, qname in enumerate(qnames):
-            # costs.append(compute_join_order_loss_pg_single(query_dict[qname],
-                    # true_cardinalities[qname], est_cardinalities[qname]))
+        costs = []
+        for i, qname in enumerate(qnames):
+            costs.append(compute_join_order_loss_pg_single(query_dict[qname],
+                    true_cardinalities[qname], est_cardinalities[qname]))
 
         for i, (est, opt) in enumerate(costs):
             est_costs[qnames[i]] = est
