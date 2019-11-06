@@ -30,23 +30,23 @@ def _get_cost(sql, cur):
 def _gen_pg_hint_cards(cards):
     '''
     '''
-    card_str = ""
+    card_str = " "
     for aliases, card in cards.items():
         card_line = PG_HINT_CARD_TMP.format(TABLES = aliases,
                                             CARD = card)
-        # card_str += card_line + "\n"
-        card_str += " "
+        card_str += card_line + "\n "
+        # card_str += card_line + " "
     return card_str
 
 def _gen_pg_hint_join(join_ops):
     '''
     '''
-    join_str = ""
+    join_str = " "
     for tables, join_op in join_ops.items():
         join_line = PG_HINT_JOIN_TMP.format(TABLES = tables,
                                             JOIN_TYPE = PG_HINT_JOINS[join_op])
-        # join_str += join_line + "\n"
-        join_str += join_line + " "
+        join_str += join_line + "\n "
+        # join_str += join_line + " "
     return join_str
 
 
@@ -139,7 +139,7 @@ def _get_modified_sql(sql, cardinalities, join_ops,
     @ret: sql, augmented with appropriate comments.
     '''
     if "explain" not in sql:
-        sql = "explain (format json) " + sql
+        sql = " explain (format json) " + sql
 
     comment_str = ""
     if cardinalities is not None:
@@ -149,12 +149,15 @@ def _get_modified_sql(sql, cardinalities, join_ops,
 
     if join_ops is not None:
         join_str = _gen_pg_hint_join(join_ops)
-        comment_str += join_str
+        comment_str += join_str + " "
+        # comment_str += join_str + " \n "
     if leading_hint is not None:
         # comment_str += leading_hint + "\n"
-        comment_str += leading_hint
+        comment_str += " " + leading_hint + " "
 
     pg_hint_str = PG_HINT_CMNT_TMP.format(COMMENT=comment_str)
+    # print(pg_hint_str)
+    # pdb.set_trace()
     # sql = pg_hint_str + "\n" + sql
     sql = pg_hint_str + sql
     return sql
@@ -208,27 +211,38 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
             explain)
     leading_hint = get_leading_hint(join_graph, explain)
     print(leading_hint)
-    # leading_hint = None
-    # pdb.set_trace()
 
     est_opt_sql = nx_graph_to_query(join_graph,
             from_clause=est_join_order_sql)
     # add the join ops etc. information
     est_opt_sql = _get_modified_sql(est_opt_sql, true_cardinalities,
             est_join_ops, leading_hint)
-    cursor.execute("SET join_collapse_limit = 1")
-    cursor.execute("SET from_collapse_limit = 1")
+    cursor.execute("SET join_collapse_limit = 1;")
+    cursor.execute("SET from_collapse_limit = 1;")
+
+    # FIXME: if we want to look at raw explains
+    # est_opt_sql = est_opt_sql.replace("(format json)", "")
+    # cursor.execute(est_opt_sql)
+    # est_explain = cursor.fetchall()
+
+    # TODO: uncomment
     est_cost, est_explain = _get_cost(est_opt_sql, cursor)
 
     # debug mode
-    debug_order, debug_ops = get_pg_join_order(join_graph, est_explain)
-
+    # debug_order, debug_ops = get_pg_join_order(join_graph, est_explain)
     # FIXME: this should work after we use leading(...) syntax
     # assert debug_order == est_join_order_sql
-    if debug_order != est_join_order_sql:
-        print("order not exact match")
-        print(debug_order)
-        print(est_join_order_sql)
+    # if debug_order != est_join_order_sql:
+        # print("order not exact match")
+        # print(debug_order)
+        # print(est_join_order_sql)
+        # print(est_opt_sql)
+        # pdb.set_trace()
+
+    debug_leading = get_leading_hint(join_graph, est_explain)
+    if debug_leading != leading_hint:
+        print("actual order:\n ", debug_leading)
+        print("wanted order:\n ", leading_hint)
         pdb.set_trace()
 
     # this would not use cross join syntax, so should work fine with
