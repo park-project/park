@@ -165,6 +165,7 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     '''
     # set est cardinalities
     # FIXME:
+    print("in compute_join_order_loss_pg_single")
     if "mii1.info " in query:
         query = query.replace("mii1.info ", "mii1.info::float")
     if "mii2.info " in query:
@@ -174,6 +175,7 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     if "mii2.info)" in query:
         query = query.replace("mii2.info)", "mii2.info::float)")
 
+    # FIXME: we should not need join graph for all these helper methods
     join_graph = extract_join_graph(query)
     os_user = getpass.getuser()
     if os_user == "ubuntu":
@@ -202,7 +204,6 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     est_opt_sql = nx_graph_to_query(join_graph,
             from_clause=est_join_order_sql)
 
-    # TODO: uncomment
     # add the join ops etc. information
     est_opt_sql = _get_modified_sql(est_opt_sql, true_cardinalities,
             est_join_ops, leading_hint)
@@ -215,6 +216,7 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         print("actual order:\n ", debug_leading)
         print("wanted order:\n ", leading_hint)
         pdb.set_trace()
+    print("estimator's join done")
 
     # this would not use cross join syntax, so should work fine with
     # join_collapse_limit = 1 as well.
@@ -234,6 +236,4 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         # est_cost-opt_cost))
     cursor.close()
     con.close()
-    return est_cost, opt_cost
-
-
+    return est_cost, opt_cost, est_explain, opt_explain

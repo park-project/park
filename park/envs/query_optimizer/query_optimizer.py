@@ -100,6 +100,9 @@ class QueryOptEnv(core.Env):
             est_cardinalities):
         est_costs = {}
         opt_costs = {}
+        est_explains = {}
+        opt_explains = {}
+
         qnames = [qn for qn in query_dict]
         num_processes = multiprocessing.cpu_count()
         with Pool(processes=num_processes) as pool:
@@ -114,11 +117,13 @@ class QueryOptEnv(core.Env):
             # costs.append(compute_join_order_loss_pg_single(query_dict[qname],
                     # true_cardinalities[qname], est_cardinalities[qname]))
 
-        for i, (est, opt) in enumerate(costs):
+        for i, (est, opt, est_explain, opt_explain) in enumerate(costs):
             est_costs[qnames[i]] = est
             opt_costs[qnames[i]] = opt
+            est_explains[qnames[i]] = est_explain
+            opt_explains[qnames[i]] = opt_explain
 
-        return est_costs, opt_costs
+        return est_costs, opt_costs, est_explains, opt_explains
 
     def compute_join_order_loss(self, query_dict, true_cardinalities,
             est_cardinalities, baseline_join_alg, postgres=False):
@@ -142,15 +147,9 @@ class QueryOptEnv(core.Env):
             return self._compute_join_order_loss_pg(query_dict,
                     true_cardinalities, est_cardinalities)
 
-        # qkey = "175480916186673679566421275341793330755518609530"
-        # join_key = "cast_info info_type3 info_type4 kind_typeepisode\
-# movie_infoDrama movie_infoGreek namef role_typecinematographer title1990"
-
-        # pdb.set_trace()
         self.initialize_queries(query_dict)
         self.initialize_cardinalities(est_cardinalities)
         self._send("startTestCardinalities")
-        # print("startTestCardinalities done")
         # java will compute optimal orderings for the estimated cardinalities
 
         self.initialize_cardinalities(true_cardinalities)
@@ -167,7 +166,7 @@ class QueryOptEnv(core.Env):
                 print(k)
                 pdb.set_trace()
 
-        return est_costs, opt_costs
+        return est_costs, opt_costs, None, None
 
     def initialize_cardinalities(self, cardinalities):
         '''

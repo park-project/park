@@ -90,7 +90,6 @@ def plot_join_order(info, pdf, ep=0, title_suffix="", single_plot=True,
                         node_labels[n] = -1
 
             nx.draw_networkx_labels(G, pos, node_labels, font_size=8)
-
         else:
             node_labels = {}
             for n in G.nodes():
