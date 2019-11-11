@@ -165,7 +165,6 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     '''
     # set est cardinalities
     # FIXME:
-    print("in compute_join_order_loss_pg_single")
     if "mii1.info " in query:
         query = query.replace("mii1.info ", "mii1.info::float")
     if "mii2.info " in query:
@@ -216,7 +215,6 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         print("actual order:\n ", debug_leading)
         print("wanted order:\n ", leading_hint)
         pdb.set_trace()
-    print("estimator's join done")
 
     # this would not use cross join syntax, so should work fine with
     # join_collapse_limit = 1 as well.
@@ -232,8 +230,6 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         # pdb.set_trace()
         est_cost = opt_cost
 
-    # print("est_cost: {}, opt_cost: {}, diff: {}".format(est_cost, opt_cost,
-        # est_cost-opt_cost))
     cursor.close()
     con.close()
     return est_cost, opt_cost, est_explain, opt_explain
