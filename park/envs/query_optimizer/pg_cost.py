@@ -193,6 +193,7 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     cursor.execute("SET geqo_threshold = {}".format(MAX_JOINS))
     cursor.execute("SET join_collapse_limit = {}".format(MAX_JOINS))
     cursor.execute("SET from_collapse_limit = {}".format(MAX_JOINS))
+
     cursor.execute(est_card_sql)
     explain = cursor.fetchall()
     est_join_order_sql, est_join_ops = get_pg_join_order(join_graph,

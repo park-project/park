@@ -104,7 +104,9 @@ class QueryOptEnv(core.Env):
         opt_explains = {}
 
         qnames = [qn for qn in query_dict]
-        num_processes = multiprocessing.cpu_count()
+        # num_processes = int(multiprocessing.cpu_count() / 2)
+        num_processes = int(multiprocessing.cpu_count())
+        num_processes = max(1, num_processes)
         with Pool(processes=num_processes) as pool:
             args = [(query_dict[qname], true_cardinalities[qname],
                 est_cardinalities[qname]) for
@@ -255,8 +257,6 @@ class QueryOptEnv(core.Env):
             # for debugging
             testq = trainq
 
-        # print("training queries: ", trainq.keys())
-        # print("test queries: ", testq.keys())
         self.initialize_queries(trainq, mode="train")
         self.initialize_queries(testq, mode="test")
 
