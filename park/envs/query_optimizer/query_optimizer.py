@@ -36,6 +36,8 @@ class QueryOptEnv(core.Env):
         self.base_dir = None    # will be set by _install_dependencies
         # start calcite + java server
         self.use_java_backend = config.qopt_use_java
+        self.opt_costs = None
+        self.opt_explains = None
 
         if self.use_java_backend:
             # original port:
@@ -99,18 +101,20 @@ class QueryOptEnv(core.Env):
     def _compute_join_order_loss_pg(self, query_dict, true_cardinalities,
             est_cardinalities):
         est_costs = {}
-        opt_costs = {}
         est_explains = {}
-        opt_explains = {}
+        if self.opt_costs is None:
+            self.opt_costs = {}
+            self.opt_explains = {}
 
         qnames = [qn for qn in query_dict]
         # num_processes = int(multiprocessing.cpu_count() / 2)
         num_processes = int(multiprocessing.cpu_count())
         num_processes = max(1, num_processes)
+        # with Pool(processes=num_processes, maxtasksperchild=1) as pool:
         with Pool(processes=num_processes) as pool:
             args = [(query_dict[qname], true_cardinalities[qname],
-                est_cardinalities[qname]) for
-                i, qname in enumerate(qnames)]
+                est_cardinalities[qname], self.opt_costs, self.opt_explains,
+                qname) for i, qname in enumerate(qnames)]
             costs = pool.starmap(compute_join_order_loss_pg_single, args)
 
         # non-multiprocess version, used for debugging
@@ -121,11 +125,11 @@ class QueryOptEnv(core.Env):
 
         for i, (est, opt, est_explain, opt_explain) in enumerate(costs):
             est_costs[qnames[i]] = est
-            opt_costs[qnames[i]] = opt
+            self.opt_costs[qnames[i]] = opt
+            self.opt_explains[qnames[i]] = opt_explain
             est_explains[qnames[i]] = est_explain
-            opt_explains[qnames[i]] = opt_explain
 
-        return est_costs, opt_costs, est_explains, opt_explains
+        return est_costs, self.opt_costs, est_explains, self.opt_explains
 
     def compute_join_order_loss(self, query_dict, true_cardinalities,
             est_cardinalities, baseline_join_alg, postgres=False):
