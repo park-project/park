@@ -148,7 +148,7 @@ def _get_modified_sql(sql, cardinalities, join_ops,
     return sql
 
 def compute_join_order_loss_pg_single(query, true_cardinalities,
-        est_cardinalities, opt_costs, opt_explains, qname):
+        est_cardinalities, opt_cost, opt_explain):
     '''
     @query: str
     @true_cardinalities:
@@ -217,10 +217,8 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         print("wanted order:\n ", leading_hint)
         pdb.set_trace()
 
-    if qname in opt_costs:
-        opt_cost = opt_costs[qname]
-        opt_explain = opt_explains[qname]
-    else:
+    if opt_cost is None:
+        assert opt_explain is None
         # this would not use cross join syntax, so should work fine with
         # join_collapse_limit = 1 as well.
         opt_sql = _get_modified_sql(query, true_cardinalities, None, None)
@@ -228,8 +226,6 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         cursor.execute("SET join_collapse_limit = {}".format(MAX_JOINS))
         cursor.execute("SET from_collapse_limit = {}".format(MAX_JOINS))
         opt_cost, opt_explain = _get_cost(opt_sql, cursor)
-        opt_costs[qname] = opt_cost
-        opt_explains[qname] = opt_explain
 
     # FIXME: temporary
     if est_cost < opt_cost:

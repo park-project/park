@@ -24,6 +24,7 @@ from .pg_cost import *
 import getpass
 import multiprocessing
 from multiprocessing import Pool
+# from collections import defaultdict
 
 class QueryOptError(Exception):
     pass
@@ -102,20 +103,29 @@ class QueryOptEnv(core.Env):
             est_cardinalities):
         est_costs = {}
         est_explains = {}
+        qnames = [qn for qn in query_dict]
         if self.opt_costs is None:
             self.opt_costs = {}
             self.opt_explains = {}
+            for qn in qnames:
+                self.opt_costs[qn] = None
+                self.opt_explains[qn] = None
 
-        qnames = [qn for qn in query_dict]
-        # num_processes = int(multiprocessing.cpu_count() / 2)
         num_processes = int(multiprocessing.cpu_count())
         num_processes = max(1, num_processes)
-        # with Pool(processes=num_processes, maxtasksperchild=1) as pool:
+        par_args = []
+        for qn in qnames:
+            if qn in self.opt_costs:
+                par_args.append((query_dict[qn], true_cardinalities[qn],
+                        est_cardinalities[qn], self.opt_costs[qn],
+                        self.opt_explains[qn]))
+            else:
+                par_args.append((query_dict[qn], true_cardinalities[qn],
+                        est_cardinalities[qn], None,
+                        None))
+
         with Pool(processes=num_processes) as pool:
-            args = [(query_dict[qname], true_cardinalities[qname],
-                est_cardinalities[qname], self.opt_costs, self.opt_explains,
-                qname) for i, qname in enumerate(qnames)]
-            costs = pool.starmap(compute_join_order_loss_pg_single, args)
+            costs = pool.starmap(compute_join_order_loss_pg_single, par_args)
 
         # non-multiprocess version, used for debugging
         # costs = []
