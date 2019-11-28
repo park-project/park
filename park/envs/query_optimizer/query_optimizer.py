@@ -99,57 +99,53 @@ class QueryOptEnv(core.Env):
 
             self.queries_initialized = False
 
-    def _compute_join_order_loss_pg(self, query_dict, true_cardinalities,
+    def _compute_join_order_loss_pg(self, sqls, true_cardinalities,
             est_cardinalities):
-        est_costs = {}
-        est_explains = {}
-        qnames = [qn for qn in query_dict]
+
+        est_costs = []
+        opt_costs = []
+        est_explains = []
+        opt_explains = []
+
         if self.opt_costs is None:
             self.opt_costs = {}
             self.opt_explains = {}
-            for qn in qnames:
-                self.opt_costs[qn] = None
-                self.opt_explains[qn] = None
+
+        par_args = []
+        for i, sql in enumerate(sqls):
+            sql_key = deterministic_hash(sql)
+            if sql_key in self.opt_costs:
+                par_args.append((sql, true_cardinalities[i],
+                        est_cardinalities[i], self.opt_costs[sql_key],
+                        self.opt_explains[sql_key]))
+            else:
+                par_args.append((sql, true_cardinalities[i],
+                        est_cardinalities[i], None,
+                        None))
 
         num_processes = int(multiprocessing.cpu_count())
         num_processes = max(1, num_processes)
-        par_args = []
-        for qn in qnames:
-            if qn in self.opt_costs:
-                par_args.append((query_dict[qn], true_cardinalities[qn],
-                        est_cardinalities[qn], self.opt_costs[qn],
-                        self.opt_explains[qn]))
-            else:
-                par_args.append((query_dict[qn], true_cardinalities[qn],
-                        est_cardinalities[qn], None,
-                        None))
-
         with Pool(processes=num_processes) as pool:
             costs = pool.starmap(compute_join_order_loss_pg_single, par_args)
 
-        # non-multiprocess version, used for debugging
-        # costs = []
-        # for i, qname in enumerate(qnames):
-            # costs.append(compute_join_order_loss_pg_single(query_dict[qname],
-                    # true_cardinalities[qname], est_cardinalities[qname]))
-
         for i, (est, opt, est_explain, opt_explain) in enumerate(costs):
-            est_costs[qnames[i]] = est
-            self.opt_costs[qnames[i]] = opt
-            self.opt_explains[qnames[i]] = opt_explain
-            est_explains[qnames[i]] = est_explain
+            sql_key = deterministic_hash(sqls[i])
+            est_costs.append(est)
+            opt_costs.append(opt)
+            est_explains.append(est_explain)
+            opt_explains.append(opt_explain)
 
-        return est_costs, self.opt_costs, est_explains, self.opt_explains
+            self.opt_costs[sql_key] = opt
+            self.opt_explains[sql_key] = opt_explain
 
-    def compute_join_order_loss(self, query_dict, true_cardinalities,
-            est_cardinalities, baseline_join_alg, postgres=False):
+        return est_costs, opt_costs, est_explains, opt_explains
+
+    def compute_join_order_loss(self, sqls, true_cardinalities,
+            est_cardinalities, baseline_join_alg, postgres=True):
         '''
-        @query_dict: str : str.
-            key: should be a unique name for the query
-            value: will be the corresponding sql string.
-        @true_cardinalities / est_cardinalities:
-            key: same as the ones for query dict.
-            value: dictionary, specifying cardinality of each subquery
+        @query_dict: [sqls]
+        @true_cardinalities / est_cardinalities: [{}]
+                dictionary, specifying cardinality of each subquery
                 key: sorted list of [table_1_key, table_2_key, ...table_n_key]
                 val: cardinality (double)
                 In order to handle aliases (this information is lost when
@@ -159,9 +155,16 @@ class QueryOptEnv(core.Env):
             way to deal with aliases.
         '''
         start = time.time()
+        assert isinstance(sqls, list)
+        assert isinstance(true_cardinalities, list)
+        assert isinstance(est_cardinalities, list)
+        assert len(sqls) == len(true_cardinalities) == len(est_cardinalities)
+
         if postgres:
-            return self._compute_join_order_loss_pg(query_dict,
+            return self._compute_join_order_loss_pg(sqls,
                     true_cardinalities, est_cardinalities)
+        else:
+            assert False
 
         self.initialize_queries(query_dict)
         self.initialize_cardinalities(est_cardinalities)
