@@ -100,7 +100,7 @@ class QueryOptEnv(core.Env):
             self.queries_initialized = False
 
     def _compute_join_order_loss_pg(self, sqls, true_cardinalities,
-            est_cardinalities):
+            est_cardinalities, num_processes):
 
         est_costs = []
         opt_costs = []
@@ -123,8 +123,7 @@ class QueryOptEnv(core.Env):
                         est_cardinalities[i], None,
                         None))
 
-        num_processes = int(multiprocessing.cpu_count())
-        num_processes = max(1, num_processes)
+        # num_processes = max(1, num_processes)
         with Pool(processes=num_processes) as pool:
             costs = pool.starmap(compute_join_order_loss_pg_single, par_args)
 
@@ -141,7 +140,8 @@ class QueryOptEnv(core.Env):
         return est_costs, opt_costs, est_explains, opt_explains
 
     def compute_join_order_loss(self, sqls, true_cardinalities,
-            est_cardinalities, baseline_join_alg, postgres=True):
+            est_cardinalities, baseline_join_alg, num_processes=8,
+            postgres=True):
         '''
         @query_dict: [sqls]
         @true_cardinalities / est_cardinalities: [{}]
@@ -162,7 +162,7 @@ class QueryOptEnv(core.Env):
 
         if postgres:
             return self._compute_join_order_loss_pg(sqls,
-                    true_cardinalities, est_cardinalities)
+                    true_cardinalities, est_cardinalities, num_processes)
         else:
             assert False
 
