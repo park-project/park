@@ -137,7 +137,7 @@ class QueryOptEnv(core.Env):
             self.opt_costs[sql_key] = opt
             self.opt_explains[sql_key] = opt_explain
 
-        return est_costs, opt_costs, est_explains, opt_explains
+        return np.array(est_costs), np.array(opt_costs), est_explains, opt_explains
 
     def compute_join_order_loss(self, sqls, true_cardinalities,
             est_cardinalities, baseline_join_alg, num_processes=8,
