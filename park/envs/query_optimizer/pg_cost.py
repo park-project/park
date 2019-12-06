@@ -178,8 +178,13 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     join_graph = extract_join_graph(query)
     os_user = getpass.getuser()
     if os_user == "ubuntu":
-        con = pg.connect(port=5432,dbname="imdb",
-                user=os_user,password="")
+        # FIXME: find single clean way to do this stuff
+        try:
+            con = pg.connect(port=5432,dbname="imdb",
+                    user=os_user,password="")
+        except:
+            con = pg.connect(port=5432,dbname="imdb",
+                    user=os_user,password="",host="localhost")
     else:
         con = pg.connect(host="localhost",port=5432,dbname="imdb",
                 user="pari",password="")
