@@ -106,10 +106,13 @@ class QueryOptEnv(core.Env):
         opt_costs = []
         est_explains = []
         opt_explains = []
+        est_sqls = []
+        opt_sqls = []
 
         if self.opt_costs is None:
             self.opt_costs = {}
             self.opt_explains = {}
+            self.opt_sqls = {}
 
         par_args = []
         for i, sql in enumerate(sqls):
@@ -117,27 +120,32 @@ class QueryOptEnv(core.Env):
             if sql_key in self.opt_costs:
                 par_args.append((sql, true_cardinalities[i],
                         est_cardinalities[i], self.opt_costs[sql_key],
-                        self.opt_explains[sql_key]))
+                        self.opt_explains[sql_key], self.opt_sqls[sql_key]))
             else:
                 par_args.append((sql, true_cardinalities[i],
                         est_cardinalities[i], None,
-                        None))
+                        None, None))
 
         # num_processes = max(1, num_processes)
         with Pool(processes=num_processes) as pool:
             costs = pool.starmap(compute_join_order_loss_pg_single, par_args)
 
-        for i, (est, opt, est_explain, opt_explain) in enumerate(costs):
+        for i, (est, opt, est_explain, opt_explain, est_sql, opt_sql) \
+                    in enumerate(costs):
             sql_key = deterministic_hash(sqls[i])
             est_costs.append(est)
             opt_costs.append(opt)
             est_explains.append(est_explain)
             opt_explains.append(opt_explain)
+            est_sqls.append(est_sql)
+            opt_sqls.append(opt_sql)
 
             self.opt_costs[sql_key] = opt
             self.opt_explains[sql_key] = opt_explain
+            self.opt_sqls[sql_key] = opt_sql
 
-        return np.array(est_costs), np.array(opt_costs), est_explains, opt_explains
+        return np.array(est_costs), np.array(opt_costs), est_explains, \
+    opt_explains, est_sqls, opt_sqls
 
     def compute_join_order_loss(self, sqls, true_cardinalities,
             est_cardinalities, baseline_join_alg, num_processes=8,
@@ -153,6 +161,9 @@ class QueryOptEnv(core.Env):
                 first predicate (if no predicate present on that table, then just "")
             FIXME: this does not handle many edge cases, and we need a better
             way to deal with aliases.
+
+        @ret:
+            TODO
         '''
         start = time.time()
         assert isinstance(sqls, list)

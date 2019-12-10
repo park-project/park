@@ -148,7 +148,7 @@ def _get_modified_sql(sql, cardinalities, join_ops,
     return sql
 
 def compute_join_order_loss_pg_single(query, true_cardinalities,
-        est_cardinalities, opt_cost, opt_explain):
+        est_cardinalities, opt_cost, opt_explain, opt_sql):
     '''
     @query: str
     @true_cardinalities:
@@ -240,4 +240,4 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
 
     cursor.close()
     con.close()
-    return est_cost, opt_cost, est_explain, opt_explain
+    return est_cost, opt_cost, est_explain, opt_explain, est_card_sql, opt_sql
