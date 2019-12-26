@@ -153,35 +153,8 @@ def _get_modified_sql(sql, cardinalities, join_ops,
     sql = pg_hint_str + sql
     return sql
 
-def compute_join_order_loss_pg_single(query, true_cardinalities,
-        est_cardinalities, opt_cost, opt_explain, opt_sql):
-    '''
-    @query: str
-    @true_cardinalities:
-        key:
-            sort([table_1 / alias_1, ..., table_n / alias_n])
-        val:
-            float
-    @est_cardinalities:
-        key:
-            sort([table_1 / alias_1, ..., table_n / alias_n])
-        val:
-            float
-
-    '''
-    # set est cardinalities
-    # FIXME:
-    if "mii1.info " in query:
-        query = query.replace("mii1.info ", "mii1.info::float")
-    if "mii2.info " in query:
-        query = query.replace("mii2.info ", "mii2.info::float")
-    if "mii1.info)" in query:
-        query = query.replace("mii1.info)", "mii1.info::float)")
-    if "mii2.info)" in query:
-        query = query.replace("mii2.info)", "mii2.info::float)")
-
-    # FIXME: we should not need join graph for all these helper methods
-    join_graph = extract_join_graph(query)
+def get_cardinalities_join_cost(query, est_cardinalities, true_cardinalities,
+        join_graph):
     os_user = getpass.getuser()
     if os_user == "ubuntu":
         # FIXME: find single clean way to do this stuff
@@ -194,10 +167,8 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     else:
         con = pg.connect(host="localhost",port=5432,dbname="imdb",
                 user="pari",password="")
-    # adds the est cardinalities as a comment to the modified sql
     est_card_sql = _get_modified_sql(query, est_cardinalities, None,
             None)
-
     # find join order
     cursor = con.cursor()
     cursor.execute("LOAD 'pg_hint_plan';")
@@ -228,16 +199,46 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         print("wanted order:\n ", leading_hint)
         pdb.set_trace()
 
-    if opt_cost is None:
-        assert opt_explain is None
-        # this would not use cross join syntax, so should work fine with
-        # join_collapse_limit = 1 as well.
-        opt_sql = _get_modified_sql(query, true_cardinalities, None, None)
+    cursor.close()
+    con.close()
+    return est_card_sql, est_cost, est_explain
 
-        cursor.execute("SET join_collapse_limit = {}".format(MAX_JOINS))
-        cursor.execute("SET from_collapse_limit = {}".format(MAX_JOINS))
-        opt_cost, opt_explain = _get_cost(opt_sql, cursor)
-        opt_leading = get_leading_hint(join_graph, opt_explain)
+def compute_join_order_loss_pg_single(query, true_cardinalities,
+        est_cardinalities, opt_cost, opt_explain, opt_sql):
+    '''
+    @query: str
+    @true_cardinalities:
+        key:
+            sort([table_1 / alias_1, ..., table_n / alias_n])
+        val:
+            float
+    @est_cardinalities:
+        key:
+            sort([table_1 / alias_1, ..., table_n / alias_n])
+        val:
+            float
+
+    '''
+    # set est cardinalities
+    # FIXME:
+    if "mii1.info " in query:
+        query = query.replace("mii1.info ", "mii1.info::float")
+    if "mii2.info " in query:
+        query = query.replace("mii2.info ", "mii2.info::float")
+    if "mii1.info)" in query:
+        query = query.replace("mii1.info)", "mii1.info::float)")
+    if "mii2.info)" in query:
+        query = query.replace("mii2.info)", "mii2.info::float)")
+
+    # FIXME: we should not need join graph for all these helper methods
+    join_graph = extract_join_graph(query)
+    est_card_sql, est_cost, est_explain = get_cardinalities_join_cost(query,
+            est_cardinalities, true_cardinalities, join_graph)
+    if opt_cost is None:
+        opt_sql, opt_cost, opt_explain = get_cardinalities_join_cost(query,
+                true_cardinalities, true_cardinalities, join_graph)
+
+    # adds the est cardinalities as a comment to the modified sql
 
     # FIXME: temporary
     if est_cost < opt_cost:
@@ -245,6 +246,4 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         # pdb.set_trace()
         est_cost = opt_cost
 
-    cursor.close()
-    con.close()
     return est_cost, opt_cost, est_explain, opt_explain, est_card_sql, opt_sql
