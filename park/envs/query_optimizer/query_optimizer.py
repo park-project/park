@@ -126,9 +126,16 @@ class QueryOptEnv(core.Env):
                         est_cardinalities[i], None,
                         None, None))
 
-        # num_processes = max(1, num_processes)
+        num_processes = max(1, num_processes)
         with Pool(processes=num_processes) as pool:
             costs = pool.starmap(compute_join_order_loss_pg_single, par_args)
+
+        # single threaded case for debugging
+        # costs = []
+        # for i, sql in enumerate(sqls):
+            # costs.append(compute_join_order_loss_pg_single(sql,
+                # true_cardinalities[i], est_cardinalities[i],
+                # None, None, None))
 
         for i, (est, opt, est_explain, opt_explain, est_sql, opt_sql) \
                     in enumerate(costs):

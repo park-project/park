@@ -20,8 +20,14 @@ def _get_cost(sql, cur):
     cur.execute(sql)
     explain = cur.fetchall()
     all_costs = extract_values(explain[0][0][0], "Total Cost")
-    cost = max(all_costs)
+    mcost = max(all_costs)
     # cur.close()
+    # cost = all_costs[-1]
+    # pdb.set_trace()
+    cost = explain[0][0][0]["Plan"]["Total Cost"]
+    # if cost != mcost:
+        # print(cost, mcost)
+        # pdb.set_trace()
     return cost, explain
 
 def _gen_pg_hint_cards(cards):
@@ -231,6 +237,7 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
         cursor.execute("SET join_collapse_limit = {}".format(MAX_JOINS))
         cursor.execute("SET from_collapse_limit = {}".format(MAX_JOINS))
         opt_cost, opt_explain = _get_cost(opt_sql, cursor)
+        opt_leading = get_leading_hint(join_graph, opt_explain)
 
     # FIXME: temporary
     if est_cost < opt_cost:
