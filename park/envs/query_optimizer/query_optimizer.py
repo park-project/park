@@ -24,6 +24,7 @@ from .pg_cost import *
 import getpass
 import multiprocessing
 from multiprocessing import Pool
+import pickle
 # from collections import defaultdict
 
 class QueryOptError(Exception):
@@ -37,8 +38,20 @@ class QueryOptEnv(core.Env):
         self.base_dir = None    # will be set by _install_dependencies
         # start calcite + java server
         self.use_java_backend = config.qopt_use_java
-        self.opt_costs = None
-        self.opt_explains = None
+        self.opt_costs_fn = "/tmp/opt_costs.pkl"
+        self.opt_explains_fn = "/tmp/opt_explains.pkl"
+        self.opt_sqls_fn = "/tmp/opt_sqls.pkl"
+        if os.path.isfile(self.opt_costs_fn):
+            with open(self.opt_costs_fn, 'rb') as handle:
+                self.opt_costs = pickle.load(handle)
+            with open(self.opt_explains_fn, 'rb') as handle:
+                self.opt_explains = pickle.load(handle)
+            with open(self.opt_sqls_fn, 'rb') as handle:
+                self.opt_sqls = pickle.load(handle)
+        else:
+            self.opt_costs = None
+            self.opt_explains = None
+            self.opt_sqls = None
 
         if self.use_java_backend:
             # original port:
@@ -118,6 +131,7 @@ class QueryOptEnv(core.Env):
         for i, sql in enumerate(sqls):
             sql_key = deterministic_hash(sql)
             if sql_key in self.opt_costs:
+                # already know for the true cardinalities case
                 par_args.append((sql, true_cardinalities[i],
                         est_cardinalities[i], self.opt_costs[sql_key],
                         self.opt_explains[sql_key], self.opt_sqls[sql_key]))
@@ -137,6 +151,7 @@ class QueryOptEnv(core.Env):
                 # true_cardinalities[i], est_cardinalities[i],
                 # None, None, None))
 
+        new_seen = False
         for i, (est, opt, est_explain, opt_explain, est_sql, opt_sql) \
                     in enumerate(costs):
             sql_key = deterministic_hash(sqls[i])
@@ -147,9 +162,23 @@ class QueryOptEnv(core.Env):
             est_sqls.append(est_sql)
             opt_sqls.append(opt_sql)
 
-            self.opt_costs[sql_key] = opt
-            self.opt_explains[sql_key] = opt_explain
-            self.opt_sqls[sql_key] = opt_sql
+            if sql_key not in self.opt_costs:
+                self.opt_costs[sql_key] = opt
+                self.opt_explains[sql_key] = opt_explain
+                self.opt_sqls[sql_key] = opt_sql
+                new_seen = True
+
+        if new_seen:
+            # FIXME: DRY
+            with open(self.opt_costs_fn, 'wb') as handle:
+                pickle.dump(self.opt_costs, handle,
+                        protocol=pickle.HIGHEST_PROTOCOL)
+            with open(self.opt_explains_fn, 'wb') as handle:
+                pickle.dump(self.opt_explains, handle,
+                        protocol=pickle.HIGHEST_PROTOCOL)
+            with open(self.opt_sqls_fn, 'wb') as handle:
+                pickle.dump(self.opt_sqls, handle,
+                        protocol=pickle.HIGHEST_PROTOCOL)
 
         return np.array(est_costs), np.array(opt_costs), est_explains, \
     opt_explains, est_sqls, opt_sqls

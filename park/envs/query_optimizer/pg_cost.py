@@ -197,7 +197,7 @@ def get_cardinalities_join_cost(query, est_cardinalities, true_cardinalities,
         # print(est_opt_sql)
         print("actual order:\n ", debug_leading)
         print("wanted order:\n ", leading_hint)
-        pdb.set_trace()
+        # pdb.set_trace()
 
     cursor.close()
     con.close()
