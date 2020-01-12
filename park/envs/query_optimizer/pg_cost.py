@@ -5,8 +5,8 @@ from .utils import *
 import pdb
 
 PG_HINT_CMNT_TMP = '''/*+ {COMMENT} */'''
-PG_HINT_JOIN_TMP = "{JOIN_TYPE} ({TABLES})"
-PG_HINT_CARD_TMP = "Rows ({TABLES} #{CARD})"
+PG_HINT_JOIN_TMP = "{JOIN_TYPE} ({TABLES}) "
+PG_HINT_CARD_TMP = "Rows ({TABLES} #{CARD}) "
 PG_HINT_LEADING_TMP = "Leading ({JOIN_ORDER})"
 PG_HINT_JOINS = {}
 PG_HINT_JOINS["Nested Loop"] = "NestLoop"
@@ -154,7 +154,7 @@ def _get_modified_sql(sql, cardinalities, join_ops,
     return sql
 
 def get_cardinalities_join_cost(query, est_cardinalities, true_cardinalities,
-        join_graph):
+        join_graph, use_indexes):
     os_user = getpass.getuser()
     if os_user == "ubuntu":
         # FIXME: find single clean way to do this stuff
@@ -167,14 +167,20 @@ def get_cardinalities_join_cost(query, est_cardinalities, true_cardinalities,
     else:
         con = pg.connect(host="localhost",port=5432,dbname="imdb",
                 user="pari",password="")
+
     est_card_sql = _get_modified_sql(query, est_cardinalities, None,
             None)
-    # find join order
     cursor = con.cursor()
     cursor.execute("LOAD 'pg_hint_plan';")
     cursor.execute("SET geqo_threshold = {}".format(MAX_JOINS))
     cursor.execute("SET join_collapse_limit = {}".format(MAX_JOINS))
     cursor.execute("SET from_collapse_limit = {}".format(MAX_JOINS))
+    if not use_indexes:
+        cursor.execute("SET enable_indexscan = off")
+        cursor.execute("SET enable_indexonlyscan = off")
+    else:
+        cursor.execute("SET enable_indexscan = on")
+        cursor.execute("SET enable_indexonlyscan = on")
 
     cursor.execute(est_card_sql)
     explain = cursor.fetchall()
@@ -187,10 +193,13 @@ def get_cardinalities_join_cost(query, est_cardinalities, true_cardinalities,
             from_clause=est_join_order_sql)
 
     # add the join ops etc. information
-    est_opt_sql = _get_modified_sql(est_opt_sql, true_cardinalities,
+    cost_sql = _get_modified_sql(est_opt_sql, true_cardinalities,
             est_join_ops, leading_hint)
 
-    est_cost, est_explain = _get_cost(est_opt_sql, cursor)
+    exec_sql = _get_modified_sql(est_opt_sql, None,
+            est_join_ops, leading_hint)
+
+    est_cost, est_explain = _get_cost(cost_sql, cursor)
     debug_leading = get_leading_hint(join_graph, est_explain)
 
     if debug_leading != leading_hint:
@@ -201,10 +210,11 @@ def get_cardinalities_join_cost(query, est_cardinalities, true_cardinalities,
 
     cursor.close()
     con.close()
-    return est_card_sql, est_cost, est_explain
+    return exec_sql, est_cost, est_explain
 
 def compute_join_order_loss_pg_single(query, true_cardinalities,
-        est_cardinalities, opt_cost, opt_explain, opt_sql):
+        est_cardinalities, opt_cost, opt_explain, opt_sql,
+        use_indexes):
     '''
     @query: str
     @true_cardinalities:
@@ -233,10 +243,12 @@ def compute_join_order_loss_pg_single(query, true_cardinalities,
     # FIXME: we should not need join graph for all these helper methods
     join_graph = extract_join_graph(query)
     est_card_sql, est_cost, est_explain = get_cardinalities_join_cost(query,
-            est_cardinalities, true_cardinalities, join_graph)
+            est_cardinalities, true_cardinalities, join_graph,
+            use_indexes)
     if opt_cost is None:
         opt_sql, opt_cost, opt_explain = get_cardinalities_join_cost(query,
-                true_cardinalities, true_cardinalities, join_graph)
+                true_cardinalities, true_cardinalities, join_graph,
+                use_indexes)
 
     # adds the est cardinalities as a comment to the modified sql
 

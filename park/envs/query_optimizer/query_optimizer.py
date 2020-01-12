@@ -26,6 +26,10 @@ import multiprocessing
 from multiprocessing import Pool
 import pickle
 # from collections import defaultdict
+try:
+    multiprocessing.set_start_method('forkserver')
+except:
+    pass
 
 class QueryOptError(Exception):
     pass
@@ -38,20 +42,21 @@ class QueryOptEnv(core.Env):
         self.base_dir = None    # will be set by _install_dependencies
         # start calcite + java server
         self.use_java_backend = config.qopt_use_java
-        self.opt_costs_fn = "/tmp/opt_costs.pkl"
-        self.opt_explains_fn = "/tmp/opt_explains.pkl"
-        self.opt_sqls_fn = "/tmp/opt_sqls.pkl"
-        if os.path.isfile(self.opt_costs_fn):
-            with open(self.opt_costs_fn, 'rb') as handle:
-                self.opt_costs = pickle.load(handle)
-            with open(self.opt_explains_fn, 'rb') as handle:
-                self.opt_explains = pickle.load(handle)
-            with open(self.opt_sqls_fn, 'rb') as handle:
-                self.opt_sqls = pickle.load(handle)
+        self.opt_cache_fn = "/tmp/opt_cache.pkl"
+        if os.path.isfile(self.opt_cache_fn):
+            with open(self.opt_cache_fn, 'rb') as handle:
+                self.opt_cache = pickle.load(handle)
         else:
-            self.opt_costs = None
-            self.opt_explains = None
-            self.opt_sqls = None
+            self.opt_cache = {}
+            self.opt_cache[0] = {}
+            self.opt_cache[1] = {}
+            self.opt_cache[0]["costs"] = {}
+            self.opt_cache[0]["explains"] = {}
+            self.opt_cache[0]["sqls"] = {}
+
+            self.opt_cache[1]["costs"] = {}
+            self.opt_cache[1]["explains"] = {}
+            self.opt_cache[1]["sqls"] = {}
 
         if self.use_java_backend:
             # original port:
@@ -113,7 +118,7 @@ class QueryOptEnv(core.Env):
             self.queries_initialized = False
 
     def _compute_join_order_loss_pg(self, sqls, true_cardinalities,
-            est_cardinalities, num_processes):
+            est_cardinalities, num_processes, use_indexes):
 
         est_costs = []
         opt_costs = []
@@ -122,26 +127,34 @@ class QueryOptEnv(core.Env):
         est_sqls = []
         opt_sqls = []
 
-        if self.opt_costs is None:
-            self.opt_costs = {}
-            self.opt_explains = {}
-            self.opt_sqls = {}
+        # if self.opt_costs is None:
+            # self.opt_costs = {}
+            # self.opt_explains = {}
+            # self.opt_sqls = {}
+        if use_indexes:
+            use_indexes = 1
+        else:
+            use_indexes = 0
+        opt_costs_cache = self.opt_cache[use_indexes]["costs"]
+        opt_sqls_cache = self.opt_cache[use_indexes]["sqls"]
+        opt_explains_cache = self.opt_cache[use_indexes]["explains"]
 
         par_args = []
         for i, sql in enumerate(sqls):
             sql_key = deterministic_hash(sql)
-            if sql_key in self.opt_costs:
+            if sql_key in opt_costs_cache:
                 # already know for the true cardinalities case
                 par_args.append((sql, true_cardinalities[i],
-                        est_cardinalities[i], self.opt_costs[sql_key],
-                        self.opt_explains[sql_key], self.opt_sqls[sql_key]))
+                        est_cardinalities[i], opt_costs_cache[sql_key],
+                        opt_explains_cache[sql_key], opt_sqls_cache[sql_key],
+                        use_indexes))
             else:
                 par_args.append((sql, true_cardinalities[i],
                         est_cardinalities[i], None,
-                        None, None))
+                        None, None, use_indexes))
 
         num_processes = max(1, num_processes)
-        with Pool(processes=num_processes) as pool:
+        with Pool(processes=num_processes, maxtasksperchild=1) as pool:
             costs = pool.starmap(compute_join_order_loss_pg_single, par_args)
 
         # single threaded case for debugging
@@ -149,7 +162,7 @@ class QueryOptEnv(core.Env):
         # for i, sql in enumerate(sqls):
             # costs.append(compute_join_order_loss_pg_single(sql,
                 # true_cardinalities[i], est_cardinalities[i],
-                # None, None, None))
+                # None, None, None, use_indexes))
 
         new_seen = False
         for i, (est, opt, est_explain, opt_explain, est_sql, opt_sql) \
@@ -162,30 +175,33 @@ class QueryOptEnv(core.Env):
             est_sqls.append(est_sql)
             opt_sqls.append(opt_sql)
 
-            if sql_key not in self.opt_costs:
-                self.opt_costs[sql_key] = opt
-                self.opt_explains[sql_key] = opt_explain
-                self.opt_sqls[sql_key] = opt_sql
+            if sql_key not in opt_costs_cache:
+                opt_costs_cache[sql_key] = opt
+                opt_explains_cache[sql_key] = opt_explain
+                opt_sqls_cache[sql_key] = opt_sql
                 new_seen = True
 
         if new_seen:
             # FIXME: DRY
-            with open(self.opt_costs_fn, 'wb') as handle:
-                pickle.dump(self.opt_costs, handle,
+            with open(self.opt_cache_fn, 'wb') as handle:
+                pickle.dump(self.opt_cache, handle,
                         protocol=pickle.HIGHEST_PROTOCOL)
-            with open(self.opt_explains_fn, 'wb') as handle:
-                pickle.dump(self.opt_explains, handle,
-                        protocol=pickle.HIGHEST_PROTOCOL)
-            with open(self.opt_sqls_fn, 'wb') as handle:
-                pickle.dump(self.opt_sqls, handle,
-                        protocol=pickle.HIGHEST_PROTOCOL)
+            # with open(self.opt_costs_fn, 'wb') as handle:
+                # pickle.dump(self.opt_costs, handle,
+                        # protocol=pickle.HIGHEST_PROTOCOL)
+            # with open(self.opt_explains_fn, 'wb') as handle:
+                # pickle.dump(self.opt_explains, handle,
+                        # protocol=pickle.HIGHEST_PROTOCOL)
+            # with open(self.opt_sqls_fn, 'wb') as handle:
+                # pickle.dump(self.opt_sqls, handle,
+                        # protocol=pickle.HIGHEST_PROTOCOL)
 
         return np.array(est_costs), np.array(opt_costs), est_explains, \
     opt_explains, est_sqls, opt_sqls
 
     def compute_join_order_loss(self, sqls, true_cardinalities,
-            est_cardinalities, baseline_join_alg, num_processes=8,
-            postgres=True):
+            est_cardinalities, baseline_join_alg, use_indexes,
+            num_processes=8, postgres=True):
         '''
         @query_dict: [sqls]
         @true_cardinalities / est_cardinalities: [{}]
@@ -209,7 +225,8 @@ class QueryOptEnv(core.Env):
 
         if postgres:
             return self._compute_join_order_loss_pg(sqls,
-                    true_cardinalities, est_cardinalities, num_processes)
+                    true_cardinalities, est_cardinalities, num_processes,
+                    use_indexes)
         else:
             assert False
 
