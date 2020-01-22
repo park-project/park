@@ -7,11 +7,20 @@ import pdb
 PG_HINT_CMNT_TMP = '''/*+ {COMMENT} */'''
 PG_HINT_JOIN_TMP = "{JOIN_TYPE} ({TABLES}) "
 PG_HINT_CARD_TMP = "Rows ({TABLES} #{CARD}) "
+PG_HINT_SCAN_TMP = "{SCAN_TYPE}({TABLE}) "
 PG_HINT_LEADING_TMP = "Leading ({JOIN_ORDER})"
 PG_HINT_JOINS = {}
 PG_HINT_JOINS["Nested Loop"] = "NestLoop"
 PG_HINT_JOINS["Hash Join"] = "HashJoin"
 PG_HINT_JOINS["Merge Join"] = "MergeJoin"
+
+PG_HINT_SCANS = {}
+PG_HINT_SCANS["Seq Scan"] = "SeqScan"
+PG_HINT_SCANS["Index Scan"] = "IndexScan"
+PG_HINT_SCANS["Index Only Scan"] = "IndexOnlyScan"
+PG_HINT_SCANS["Bitmap Heap Scan"] = "BitmapScan"
+PG_HINT_SCANS["Tid Scan"] = "TidScan"
+
 MAX_JOINS = 16
 
 def _get_cost(sql, cur):
@@ -50,6 +59,15 @@ def _gen_pg_hint_join(join_ops):
         join_str += join_line
     return join_str
 
+def _gen_pg_hint_scan(scan_ops):
+    '''
+    '''
+    scan_str = ""
+    for alias, scan_op in scan_ops.items():
+        scan_line = PG_HINT_SCAN_TMP.format(TABLE = alias,
+                                            SCAN_TYPE = PG_HINT_SCANS[scan_op])
+        scan_str += scan_line
+    return scan_str
 
 def get_leading_hint(join_graph, explain):
     '''
@@ -85,9 +103,18 @@ def get_leading_hint(join_graph, explain):
 
 def get_pg_join_order(join_graph, explain):
     '''
-    Ryan's implementation.
     '''
     physical_join_ops = {}
+    scan_ops = {}
+    def __update_scan(plan):
+        node_types = extract_values(plan, "Node Type")
+        alias = extract_values(plan, "Alias")[0]
+        for nt in node_types:
+            if "Scan" in nt:
+                scan_type = nt
+                break
+        scan_ops[alias] = nt
+
     def __extract_jo(plan):
         if plan["Node Type"] in join_types:
             left = list(extract_aliases(plan["Plans"][0], jg=join_graph))
@@ -105,12 +132,16 @@ def get_pg_join_order(join_graph, explain):
             physical_join_ops[all_nodes] = plan["Node Type"]
 
             if len(left) == 1 and len(right) == 1:
+                __update_scan(plan["Plans"][0])
+                __update_scan(plan["Plans"][1])
                 return left[0] +  " CROSS JOIN " + right[0]
 
             if len(left) == 1:
+                __update_scan(plan["Plans"][0])
                 return left[0] + " CROSS JOIN (" + __extract_jo(plan["Plans"][1]) + ")"
 
             if len(right) == 1:
+                __update_scan(plan["Plans"][1])
                 return "(" + __extract_jo(plan["Plans"][0]) + ") CROSS JOIN " + right[0]
 
             return ("(" + __extract_jo(plan["Plans"][0])
@@ -119,10 +150,10 @@ def get_pg_join_order(join_graph, explain):
 
         return __extract_jo(plan["Plans"][0])
 
-    return __extract_jo(explain[0][0][0]["Plan"]), physical_join_ops
+    return __extract_jo(explain[0][0][0]["Plan"]), physical_join_ops, scan_ops
 
 def _get_modified_sql(sql, cardinalities, join_ops,
-        leading_hint):
+        leading_hint, scan_ops):
     '''
     @cardinalities: dict
     @join_ops: dict
@@ -141,15 +172,13 @@ def _get_modified_sql(sql, cardinalities, join_ops,
     if join_ops is not None:
         join_str = _gen_pg_hint_join(join_ops)
         comment_str += join_str + " "
-        # comment_str += join_str + " \n "
     if leading_hint is not None:
-        # comment_str += leading_hint + "\n"
         comment_str += leading_hint + " "
+    if scan_ops is not None:
+        scan_str = _gen_pg_hint_scan(scan_ops)
+        comment_str += scan_str + " "
 
     pg_hint_str = PG_HINT_CMNT_TMP.format(COMMENT=comment_str)
-    # print(pg_hint_str)
-    # pdb.set_trace()
-    # sql = pg_hint_str + "\n" + sql
     sql = pg_hint_str + sql
     return sql
 
@@ -168,8 +197,6 @@ def get_cardinalities_join_cost(query, est_cardinalities, true_cardinalities,
         con = pg.connect(host="localhost",port=5432,dbname="imdb",
                 user="pari",password="")
 
-    est_card_sql = _get_modified_sql(query, est_cardinalities, None,
-            None)
     cursor = con.cursor()
     cursor.execute("LOAD 'pg_hint_plan';")
     cursor.execute("SET geqo_threshold = {}".format(MAX_JOINS))
@@ -182,9 +209,11 @@ def get_cardinalities_join_cost(query, est_cardinalities, true_cardinalities,
         cursor.execute("SET enable_indexscan = on")
         cursor.execute("SET enable_indexonlyscan = on")
 
+    est_card_sql = _get_modified_sql(query, est_cardinalities, None,
+            None, None)
     cursor.execute(est_card_sql)
     explain = cursor.fetchall()
-    est_join_order_sql, est_join_ops = get_pg_join_order(join_graph,
+    est_join_order_sql, est_join_ops, scan_ops = get_pg_join_order(join_graph,
             explain)
     leading_hint = get_leading_hint(join_graph, explain)
     assert "info" not in leading_hint
@@ -194,10 +223,10 @@ def get_cardinalities_join_cost(query, est_cardinalities, true_cardinalities,
 
     # add the join ops etc. information
     cost_sql = _get_modified_sql(est_opt_sql, true_cardinalities,
-            est_join_ops, leading_hint)
+            est_join_ops, leading_hint, scan_ops)
 
-    exec_sql = _get_modified_sql(est_opt_sql, None,
-            est_join_ops, leading_hint)
+    exec_sql = _get_modified_sql(est_opt_sql, est_cardinalities,
+            est_join_ops, leading_hint, scan_ops)
 
     est_cost, est_explain = _get_cost(cost_sql, cursor)
     debug_leading = get_leading_hint(join_graph, est_explain)

@@ -24,12 +24,13 @@ from .pg_cost import *
 import getpass
 import multiprocessing
 from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 import pickle
 # from collections import defaultdict
-try:
-    multiprocessing.set_start_method('forkserver')
-except:
-    pass
+# try:
+    # multiprocessing.set_start_method('forkserver')
+# except:
+    # pass
 
 class QueryOptError(Exception):
     pass
@@ -118,7 +119,7 @@ class QueryOptEnv(core.Env):
             self.queries_initialized = False
 
     def _compute_join_order_loss_pg(self, sqls, true_cardinalities,
-            est_cardinalities, num_processes, use_indexes):
+            est_cardinalities, num_processes, use_indexes, pool):
 
         est_costs = []
         opt_costs = []
@@ -127,10 +128,6 @@ class QueryOptEnv(core.Env):
         est_sqls = []
         opt_sqls = []
 
-        # if self.opt_costs is None:
-            # self.opt_costs = {}
-            # self.opt_explains = {}
-            # self.opt_sqls = {}
         if use_indexes:
             use_indexes = 1
         else:
@@ -153,8 +150,11 @@ class QueryOptEnv(core.Env):
                         est_cardinalities[i], None,
                         None, None, use_indexes))
 
-        num_processes = max(1, num_processes)
-        with Pool(processes=num_processes, maxtasksperchild=1) as pool:
+        if pool is None:
+            num_processes = max(1, num_processes)
+            with Pool(processes=num_processes) as pool:
+                costs = pool.starmap(compute_join_order_loss_pg_single, par_args)
+        else:
             costs = pool.starmap(compute_join_order_loss_pg_single, par_args)
 
         # single threaded case for debugging
@@ -201,7 +201,7 @@ class QueryOptEnv(core.Env):
 
     def compute_join_order_loss(self, sqls, true_cardinalities,
             est_cardinalities, baseline_join_alg, use_indexes,
-            num_processes=8, postgres=True):
+            num_processes=8, postgres=True, pool=None):
         '''
         @query_dict: [sqls]
         @true_cardinalities / est_cardinalities: [{}]
@@ -226,7 +226,7 @@ class QueryOptEnv(core.Env):
         if postgres:
             return self._compute_join_order_loss_pg(sqls,
                     true_cardinalities, est_cardinalities, num_processes,
-                    use_indexes)
+                    use_indexes, pool)
         else:
             assert False
 
