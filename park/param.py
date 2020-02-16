@@ -59,7 +59,7 @@ parser.add_argument('--warmup_delay', type=int, default=1000,
 # -- Query Optimizer --
 parser.add_argument('--qopt_java_output', type=int, default=0,
                     help="should the java servers output be visible")
-parser.add_argument('--qopt_use_java', type=int, default=1,
+parser.add_argument('--qopt_use_java', type=int, default=0,
                     help="should the java servers output be visible")
 # TODO: need to add more control for this
 parser.add_argument('--qopt_viz', type=int, default=0,
