@@ -103,6 +103,8 @@ parser.add_argument('--cache_trace', type=str, required=False, default='test',
                     help='trace selection')
 parser.add_argument('--cache_size', type=int, required=False, default=1024, 
                     help='size of network cache')
+parser.add_argument('--cache_unseen_recency', type=int, required=False, default=500,
+                    help='default number for the recency feature')
 
 # -- Simple Queue --
 parser.add_argument('--sq_num_servers', type=float, default=5,
