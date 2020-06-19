@@ -112,5 +112,42 @@ parser.add_argument('--sq_num_servers', type=float, default=5,
 parser.add_argument('--sq_free_up_prob', type=float, default=0.5,
                     help='Probability for a server to free up (default: 0.5)')
 
+# -- Switch Scheduling --
+parser.add_argument('--ss_num_ports', type=int, default=3,
+                     help='Number of ports (same for input and output) (default: 3)')
+parser.add_argument('--ss_state_max_queue', type=int, default=50,
+                     help='Max queue size in state before clipping (default: 50)')
+parser.add_argument('--ss_load', type=float, default=0.9,
+                     help='Load of the system (default: 0.9)')
+
+# -- Device Placement for Tensorflow --
+parser.add_argument('--pl_graph', type=str, default='inception',
+                    help='The tensorflow graph to place')
+parser.add_argument('--pl_n_devs', type=int, default=2,
+                    help='Number of devices to split the graph across')
+
+# -- Circuit Simulator --
+parser.add_argument('--circuit_remote_host', type=str, default=None,
+                    help='The remote host of circuit simulation server (default: None)')
+parser.add_argument('--circuit_remote_port', type=int, default=None,
+                    help='The remote port of circuit simulation server (default: None)')
+parser.add_argument('--circuit_tmp_path', type=str, default='./tmp',
+                    help='The temporary path to the simulator (default: ./tmp)')
+parser.add_argument('--circuit_env_type', type=str, default='pointed',
+                    help='The circuit environment type (default: pointed)')
+parser.add_argument('--circuit_total_steps', type=int, default=5,
+                    help='The total steps of the environment (default: 5)')
+
+# -- Congestion Control --
+parser.add_argument('--cc_delay', type=int, default=25, help='Link delay to run experiment with')
+parser.add_argument('--cc_uplink_trace', type=str, default="const48.mahi", help='Uplink trace to use')
+parser.add_argument('--cc_downlink_trace', type=str, default="const48.mahi", help='Uplink trace to use')
+parser.add_argument('--cc_duration', type=int, default=120, help='How long of an experiment to run')
+
+# -- Region Assignment
+parser.add_argument('--ra_shuffle', type=bool, default=True, 
+    help="Whether or not to shuffle the order that pages are assigned, or to use the creation order.")
+
+
 
 config, _ = parser.parse_known_args()
