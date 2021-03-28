@@ -40,6 +40,7 @@ class QueryOptEnv(core.Env):
     TODO: describe state, including the features for nodes and edges.
     """
     def __init__(self):
+        print("in init!")
         self.base_dir = None    # will be set by _install_dependencies
         # start calcite + java server
         self.use_java_backend = config.qopt_use_java
@@ -101,20 +102,22 @@ class QueryOptEnv(core.Env):
 
             # self.query_set = self._send("getCurQuerySet")
             self.attr_count = int(self._send("getAttrCount"))
+            print("attr count: ", self.attr_count)
 
             self.current_query = None
 
             # setup space with the new graph
             self._setup_space()
+            print("setup space done!")
 
             # more experimental stuff
 
             # original graph used to denote state
-            self.orig_graph = None
-            if config.qopt_viz:
-                self.viz_ep = 0
-                self.viz_output_dir = "./visualization/"
-                self.viz_pdf = PdfPages(self.viz_output_dir + "test.pdf")
+            # self.orig_graph = None
+            # if config.qopt_viz:
+                # self.viz_ep = 0
+                # self.viz_output_dir = "./visualization/"
+                # self.viz_pdf = PdfPages(self.viz_output_dir + "test.pdf")
 
             self.queries_initialized = False
 
@@ -397,12 +400,14 @@ class QueryOptEnv(core.Env):
         conn_failed = False
         try:
             os_user = getpass.getuser()
-            if os_user == "ubuntu":
-                conn = psycopg2.connect(port=5432,dbname="imdb",
-                        user=os_user,password="")
-            else:
-                conn = psycopg2.connect(host="localhost",port=5432,dbname="imdb",
-                        user="pari",password="")
+            conn = psycopg2.connect(host="localhost",port=5432,dbname="imdb",
+                    user="root",password="password")
+            # if os_user == "ubuntu":
+                # conn = psycopg2.connect(port=5432,dbname="imdb",
+                        # user=os_user,password="")
+            # else:
+                # conn = psycopg2.connect(host="localhost",port=5432,dbname="imdb",
+                        # user="pari",password="")
         except Exception as e:
             import traceback
             print("caught exception!")
@@ -672,8 +677,8 @@ class QueryOptEnv(core.Env):
         -testCardinalities {testCardinalities}"'
         # FIXME: setting the java directory relative to the directory we are
         # executing it from?
-        if config.qopt_test_cardinalities:
-            print("WARNING: test cardinalities mode on")
+        # if config.qopt_test_cardinalities:
+            # print("WARNING: test cardinalities mode on")
 
         cmd = JAVA_EXEC_FORMAT.format(
                 query = config.qopt_query,
@@ -734,6 +739,7 @@ class QueryOptEnv(core.Env):
             self.java_process = sp.Popen(cmd, shell=True,
                     cwd=qopt_path, preexec_fn=os.setsid)
 
+        print("started java server!!!")
         # FIXME: prob not required
         time.sleep(0.5)
 
