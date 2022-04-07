@@ -1,7 +1,7 @@
 # Park
 
 ### Real system interface
-```
+```python
 import park
 import agent_impl  # implemented by user
 
@@ -14,7 +14,7 @@ env.run(agent)
 ```
 
 The `agent_impl.py` should implement
-```
+```python
 class Agent(object):
     def __init__(self, state_space, action_space, *args, **kwargs):
         self.state_space = state_space
@@ -28,7 +28,7 @@ class Agent(object):
 
 ### Simulation interface
 Similar to OpenAI Gym interface.
-```
+```python
 import park
 
 env = park.make('load_balance')
@@ -61,7 +61,7 @@ while not done:
 
 ### Misc
 Note: to use `argparse` that is compatiable with park parameters, add parameters using
-```
+```python
 from park.param import parser
 parser.add_argument('--new_parameter')
 config = parser.parse_args()
