@@ -10,7 +10,7 @@ capnp-rpc = "0.9"
 fnv = "1"
 futures = "0.1"
 portus = "0.5"
-tokio = "0.1"
+tokio = "1.8"
 
 [build-dependencies]
 capnpc = "0.9"
